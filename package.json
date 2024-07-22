@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@openzeppelin/test-helpers": "^0.5.16",
+    "assert": "^2.1.0",
+    "truffle": "^5.11.5"
+  }
+}
