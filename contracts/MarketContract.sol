@@ -107,20 +107,24 @@ contract MarketContract {
         bidCount++;
     }
 
-    function acceptBid(uint _bidId) public onlyDuringAcceptancePeriod {
+    function acceptBid(
+        uint _bidId,
+        address buyer
+    ) public onlyDuringAcceptancePeriod {
         require(bids[_bidId].owner != address(0), "Bid does not exist");
         require(!bids[_bidId].isAccepted, "Bid already accepted");
         bids[_bidId].isAccepted = true;
-        bids[_bidId].acceptedBy = msg.sender;
-        emit BidAccepted(_bidId, msg.sender);
+        bids[_bidId].acceptedBy = buyer;
+        emit BidAccepted(_bidId, buyer);
     }
 
     function purchaseEnergy(
-        uint _bidId
+        uint _bidId,
+        address buyer
     ) public payable onlyDuringResultsAnnouncement {
         require(bids[_bidId].isAccepted, "Bid not accepted");
         require(
-            bids[_bidId].acceptedBy == msg.sender,
+            bids[_bidId].acceptedBy == buyer,
             "Only accepted buyer can purchase"
         );
         require(
@@ -133,7 +137,7 @@ contract MarketContract {
         uint price = bids[_bidId].price;
 
         payable(owner).transfer(msg.value);
-        emit PaymentRecorded(_bidId, msg.sender, owner, amount, price);
-        emit EnergyPurchased(_bidId, msg.sender, owner, amount, price);
+        emit PaymentRecorded(_bidId, buyer, owner, amount, price);
+        emit EnergyPurchased(_bidId, buyer, owner, amount, price);
     }
 }

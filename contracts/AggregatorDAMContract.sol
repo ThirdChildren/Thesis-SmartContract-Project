@@ -13,6 +13,7 @@ contract AggregatorDAMContract {
 
     mapping(address => Battery) public batteries;
     MarketContract public market;
+    uint8 public commissionPercentage; // Commission percentage (e.g., 5 means 5%)
 
     event BatteryRegistered(address indexed owner, uint8 capacity, uint8 SoC);
     event BidSubmitted(address indexed owner, uint8 amount, uint8 price);
@@ -23,6 +24,7 @@ contract AggregatorDAMContract {
         uint price
     );
     event BatterySoCUpdated(address indexed owner, uint8 newSoC);
+    event CommissionUpdated(uint8 newCommission);
 
     modifier batteryIsNotRegistered() {
         require(
@@ -50,8 +52,9 @@ contract AggregatorDAMContract {
         _;
     }
 
-    constructor(address _marketAddress) {
+    constructor(address _marketAddress, uint8 _commissionPercentage) {
         market = MarketContract(_marketAddress);
+        commissionPercentage = _commissionPercentage;
     }
 
     function registerBattery(
@@ -72,12 +75,21 @@ contract AggregatorDAMContract {
     }
 
     function acceptBid(uint8 _bidId) public {
-        market.acceptBid(_bidId);
+        market.acceptBid(_bidId, msg.sender);
     }
 
     function purchaseEnergy(uint _bidId) public payable {
-        market.purchaseEnergy{value: msg.value}(_bidId);
+        market.purchaseEnergy{value: msg.value}(_bidId, msg.sender);
         (, uint amount, uint price, , ) = market.bids(_bidId);
+
+        uint totalCost = amount * price;
+        uint commission = (totalCost * commissionPercentage) / 100;
+        uint amountAfterCommission = totalCost - commission;
+
+        (address owner, , , , ) = market.bids(_bidId);
+        payable(owner).transfer(amountAfterCommission);
+        payable(address(this)).transfer(commission);
+
         emit EnergyPurchasedFromMarket(msg.sender, _bidId, amount, price);
     }
 
@@ -90,5 +102,11 @@ contract AggregatorDAMContract {
         ); // calculate new SoC
         battery.initial_soc = newSoc; // update the SoC
         emit BatterySoCUpdated(msg.sender, newSoc);
+    }
+
+    function updateCommissionPercentage(uint8 _newCommission) external {
+        // Optionally add access control to restrict who can call this function
+        commissionPercentage = _newCommission;
+        emit CommissionUpdated(_newCommission);
     }
 }
