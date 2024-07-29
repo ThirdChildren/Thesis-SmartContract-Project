@@ -1,208 +1,228 @@
-const MarketContract = artifacts.require("MarketContract");
-const AggregatorContract = artifacts.require("AggregatorDAMContract");
-
+const Aggregator = artifacts.require("Aggregator");
+const Market = artifacts.require("Market");
+const Payment = artifacts.require("Payment");
 const { time } = require("@openzeppelin/test-helpers");
 
-contract("Day Ahead Market Test", (accounts) => {
-  const [
-    admin,
-    aggregatorA,
-    aggregatorB,
-    aggregatorC,
-    batteryOwner1,
-    batteryOwner2,
-    batteryOwner3,
-    buyer1,
-    buyer2,
-  ] = accounts;
-  const commissionPercentage = 5; // 5% commission
+contract("Day Ahead Market Contract", (accounts) => {
+  const [buyer, owner1, owner2, owner3, owner4, owner5, owner6] = accounts;
 
+  let aggregatorContract1;
+  let aggregatorContract2;
+  let aggregatorContract3;
   let market;
-  let aggregatorAContract;
-  let aggregatorBContract;
-  let aggregatorCContract;
+  let payment;
 
   before(async () => {
-    const currentTime = (await web3.eth.getBlock("latest")).timestamp;
-    const marketOpenTime = currentTime;
-    const marketCloseTime = currentTime + 3600; // 1 hour later
-    const resultsAnnouncementTime = currentTime + 7200; // 2 hours later
+    payment = await Payment.new();
+    aggregatorContract1 = await Aggregator.new(5); // 5% commission rate
+    aggregatorContract2 = await Aggregator.new(5); // 5% commission rate
+    aggregatorContract3 = await Aggregator.new(5); // 5% commission rate
+    market = await Market.new(payment.address);
 
-    market = await MarketContract.new(
-      admin,
-      marketOpenTime,
-      marketCloseTime,
-      resultsAnnouncementTime
-    );
-    aggregatorAContract = await AggregatorContract.new(
-      market.address,
-      commissionPercentage,
-      { from: aggregatorA }
-    );
-    aggregatorBContract = await AggregatorContract.new(
-      market.address,
-      commissionPercentage,
-      { from: aggregatorB }
-    );
-    aggregatorCContract = await AggregatorContract.new(
-      market.address,
-      commissionPercentage,
-      { from: aggregatorC }
-    );
+    await market.setAggregator(owner1, aggregatorContract1.address); // Imposta gli aggregatori per i rispettivi owner delle batterie
+    await market.setAggregator(owner2, aggregatorContract1.address);
+    await market.setAggregator(owner3, aggregatorContract2.address);
+    await market.setAggregator(owner4, aggregatorContract2.address);
+    await market.setAggregator(owner5, aggregatorContract3.address);
+    await market.setAggregator(owner6, aggregatorContract3.address);
   });
 
   it("should register batteries", async () => {
-    await aggregatorAContract.registerBattery(100, 85, { from: batteryOwner1 });
-    await aggregatorBContract.registerBattery(150, 90, { from: batteryOwner2 });
-    await aggregatorCContract.registerBattery(120, 80, { from: batteryOwner3 });
+    // Register batteries for Aggregator 1
+    await aggregatorContract1.registerBattery(owner1, 100, 80, true, {
+      from: owner1,
+    });
+    await aggregatorContract1.registerBattery(owner2, 150, 85, true, {
+      from: owner2,
+    });
 
-    const batteryA = await aggregatorAContract.batteries(batteryOwner1);
-    const batteryB = await aggregatorBContract.batteries(batteryOwner2);
-    const batteryC = await aggregatorCContract.batteries(batteryOwner3);
+    // Register batteries for Aggregator 2
+    await aggregatorContract2.registerBattery(owner3, 120, 70, true, {
+      from: owner3,
+    });
+    await aggregatorContract2.registerBattery(owner4, 130, 75, true, {
+      from: owner4,
+    });
 
-    console.log("Battery A owner: ", batteryA.owner);
-    console.log("Battery B owner: ", batteryB.owner);
-    console.log("Battery C owner: ", batteryC.owner);
+    // Register batteries for Aggregator 3
+    await aggregatorContract3.registerBattery(owner5, 180, 90, true, {
+      from: owner5,
+    });
+    await aggregatorContract3.registerBattery(owner6, 100, 65, true, {
+      from: owner6,
+    });
 
-    assert.equal(
-      batteryA.capacity,
-      100,
-      "Aggregator A battery capacity mismatch"
-    );
-    assert.equal(batteryA.initial_soc, 85, "Aggregator A battery SoC mismatch");
+    const battery1 = await aggregatorContract1.batteries(owner1);
+    const battery2 = await aggregatorContract1.batteries(owner2);
+    const battery3 = await aggregatorContract2.batteries(owner3);
+    const battery4 = await aggregatorContract2.batteries(owner4);
+    const battery5 = await aggregatorContract3.batteries(owner5);
+    const battery6 = await aggregatorContract3.batteries(owner6);
 
-    assert.equal(
-      batteryB.capacity,
-      150,
-      "Aggregator B battery capacity mismatch"
-    );
-    assert.equal(batteryB.initial_soc, 90, "Aggregator B battery SoC mismatch");
+    assert.equal(battery1.owner, owner1, "Battery 1 owner mismatch");
+    assert.equal(battery1.capacity, 100, "Battery 1 capacity mismatch");
+    assert.equal(battery1.SoC, 80, "Battery 1 SoC mismatch");
 
-    assert.equal(
-      batteryC.capacity,
-      120,
-      "Aggregator C battery capacity mismatch"
-    );
-    assert.equal(batteryC.initial_soc, 80, "Aggregator C battery SoC mismatch");
+    assert.equal(battery2.owner, owner2, "Battery 2 owner mismatch");
+    assert.equal(battery2.capacity, 150, "Battery 2 capacity mismatch");
+    assert.equal(battery2.SoC, 85, "Battery 2 SoC mismatch");
+
+    assert.equal(battery3.owner, owner3, "Battery 3 owner mismatch");
+    assert.equal(battery3.capacity, 120, "Battery 3 capacity mismatch");
+    assert.equal(battery3.SoC, 70, "Battery 3 SoC mismatch");
+
+    assert.equal(battery4.owner, owner4, "Battery 4 owner mismatch");
+    assert.equal(battery4.capacity, 130, "Battery 4 capacity mismatch");
+    assert.equal(battery4.SoC, 75, "Battery 4 SoC mismatch");
+
+    assert.equal(battery5.owner, owner5, "Battery 5 owner mismatch");
+    assert.equal(battery5.capacity, 180, "Battery 5 capacity mismatch");
+    assert.equal(battery5.SoC, 90, "Battery 5 SoC mismatch");
+
+    assert.equal(battery6.owner, owner6, "Battery 6 owner mismatch");
+    assert.equal(battery6.capacity, 100, "Battery 6 capacity mismatch");
+    assert.equal(battery6.SoC, 65, "Battery 6 SoC mismatch");
   });
 
-  it("should submit bids", async () => {
-    await aggregatorAContract.submitBid(50, 10, { from: batteryOwner1 });
-    await aggregatorBContract.submitBid(100, 8, { from: batteryOwner2 });
-    await aggregatorCContract.submitBid(70, 12, { from: batteryOwner3 });
-    await aggregatorAContract.submitBid(30, 9, { from: batteryOwner1 });
-    await aggregatorBContract.submitBid(60, 7, { from: batteryOwner2 });
+  it("should set market times", async () => {
+    const currentTime = (await web3.eth.getBlock("latest")).timestamp;
+    const openTime = currentTime;
+    const closeTime = currentTime + 3600; // 1 hour later
+    const resultsTime = closeTime + 1800; // 30 minutes after market close
+
+    await market.setMarketTimes(openTime, closeTime, resultsTime);
+
+    const marketOpenTime = await market.marketOpenTime();
+    const marketCloseTime = await market.marketCloseTime();
+    const resultsAnnouncementTime = await market.resultsAnnouncementTime();
+
+    assert.equal(
+      marketOpenTime.toNumber(),
+      openTime,
+      "Market open time not set correctly"
+    );
+    assert.equal(
+      marketCloseTime.toNumber(),
+      closeTime,
+      "Market close time not set correctly"
+    );
+    assert.equal(
+      resultsAnnouncementTime.toNumber(),
+      resultsTime,
+      "Results announcement time not set correctly"
+    );
+  });
+
+  it("should place bids during market open", async () => {
+    // Increase time to market open
+    await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 61);
+
+    // Place bids
+    await market.placeBid(50, 10, { from: owner1 });
+    await market.placeBid(75, 12, { from: owner2 });
+    await market.placeBid(60, 8, { from: owner3 });
+    await market.placeBid(70, 6, { from: owner4 });
+    await market.placeBid(80, 15, { from: owner5 });
+    await market.placeBid(90, 7, { from: owner6 });
 
     const bid0 = await market.bids(0);
     const bid1 = await market.bids(1);
     const bid2 = await market.bids(2);
     const bid3 = await market.bids(3);
     const bid4 = await market.bids(4);
+    const bid5 = await market.bids(5);
 
-    assert.equal(bid0.owner, batteryOwner1, "Bid 0 owner mismatch");
+    assert.equal(bid0.bidder, owner1, "Bid 0 owner mismatch");
     assert.equal(bid0.amount, 50, "Bid 0 amount mismatch");
     assert.equal(bid0.price, 10, "Bid 0 price mismatch");
 
-    assert.equal(bid1.owner, batteryOwner2, "Bid 1 owner mismatch");
-    assert.equal(bid1.amount, 100, "Bid 1 amount mismatch");
-    assert.equal(bid1.price, 8, "Bid 1 price mismatch");
+    assert.equal(bid1.bidder, owner2, "Bid 1 owner mismatch");
+    assert.equal(bid1.amount, 75, "Bid 1 amount mismatch");
+    assert.equal(bid1.price, 12, "Bid 1 price mismatch");
 
-    assert.equal(bid2.owner, batteryOwner3, "Bid 2 owner mismatch");
-    assert.equal(bid2.amount, 70, "Bid 2 amount mismatch");
-    assert.equal(bid2.price, 12, "Bid 2 price mismatch");
+    assert.equal(bid2.bidder, owner3, "Bid 2 owner mismatch");
+    assert.equal(bid2.amount, 60, "Bid 2 amount mismatch");
+    assert.equal(bid2.price, 8, "Bid 2 price mismatch");
 
-    assert.equal(bid3.owner, batteryOwner1, "Bid 3 owner mismatch");
-    assert.equal(bid3.amount, 30, "Bid 3 amount mismatch");
-    assert.equal(bid3.price, 9, "Bid 3 price mismatch");
+    assert.equal(bid3.bidder, owner4, "Bid 3 owner mismatch");
+    assert.equal(bid3.amount, 70, "Bid 3 amount mismatch");
+    assert.equal(bid3.price, 6, "Bid 3 price mismatch");
 
-    assert.equal(bid4.owner, batteryOwner2, "Bid 4 owner mismatch");
-    assert.equal(bid4.amount, 60, "Bid 4 amount mismatch");
-    assert.equal(bid4.price, 7, "Bid 4 price mismatch");
+    assert.equal(bid4.bidder, owner5, "Bid 4 owner mismatch");
+    assert.equal(bid4.amount, 80, "Bid 4 amount mismatch");
+    assert.equal(bid4.price, 15, "Bid 4 price mismatch");
+
+    assert.equal(bid5.bidder, owner6, "Bid 5 owner mismatch");
+    assert.equal(bid5.amount, 90, "Bid 5 amount mismatch");
+    assert.equal(bid5.price, 7, "Bid 5 price mismatch");
   });
 
-  it("should accept bids", async () => {
-    await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 3601); // Increase time to market close + 1 second
-
-    await aggregatorAContract.acceptBid(0, { from: buyer1 });
-    await aggregatorBContract.acceptBid(1, { from: buyer2 });
-    await aggregatorAContract.acceptBid(3, { from: buyer2 });
-
-    const bid0 = await market.bids(0);
-    const bid1 = await market.bids(1);
-    const bid3 = await market.bids(3);
-
-    assert.equal(bid0.isAccepted, true, "Bid 0 not accepted");
-    assert.equal(bid1.isAccepted, true, "Bid 1 not accepted");
-    assert.equal(bid3.isAccepted, true, "Bid 3 not accepted");
-
-    assert.equal(bid0.acceptedBy, buyer1, "Bid 0 accepted by mismatch");
-    assert.equal(bid1.acceptedBy, buyer2, "Bid 1 accepted by mismatch");
-    assert.equal(bid3.acceptedBy, buyer2, "Bid 3 accepted by mismatch");
-    console.log("Bid 0 owner: ", bid0.owner);
-    console.log("Bid 1 owner: ", bid1.owner);
-    console.log("Bid 3 owner: ", bid3.owner);
-    console.log("Buyer 1: ", buyer1);
-    console.log("Buyer 2: ", buyer2);
-  });
-
-  it("should purchase energy", async () => {
-    await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 7201); // Increase time to results announcement + 1 second
-
-    const bid0 = await market.bids(0);
-    const bid1 = await market.bids(1);
-    const bid3 = await market.bids(3);
-    console.log("Bid 0 owner: ", bid0.owner);
-    console.log("Bid 1 owner: ", bid1.owner);
-    console.log("Bid 3 owner: ", bid3.owner);
-
-    const price0 = bid0.amount * bid0.price;
-    const price1 = bid1.amount * bid1.price;
-    const price3 = bid3.amount * bid3.price;
-
-    console.log("Attempting to purchase bid 0 with price: ", price0);
-    await aggregatorAContract.purchaseEnergy(0, {
-      from: buyer1,
-      value: price0,
+  it("should confirm some purchases and deduct commission", async () => {
+    // Deposit sufficient funds for the buyer
+    await market.depositFunds({
+      from: buyer,
+      value: web3.utils.toWei("2", "ether"),
     });
-    console.log("Purchased bid 0");
+    // Increase time to market close + 1 second
+    await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 3601);
 
-    console.log("Attempting to purchase bid 1 with price: ", price1);
-    await aggregatorBContract.purchaseEnergy(1, {
-      from: buyer2,
-      value: price1,
-    });
-    console.log("Purchased bid 1");
+    // Confirm purchases (some bids)
+    await market.confirmPurchase(buyer, owner1, 50, 10, { from: buyer });
+    await market.confirmPurchase(buyer, owner4, 70, 6, { from: buyer });
 
-    console.log("Attempting to purchase bid 3 with price: ", price3);
-    await aggregatorAContract.purchaseEnergy(3, {
-      from: buyer2,
-      value: price3,
-    });
-    console.log("Purchased bid 3");
-
-    // Manually update SoC for testing purposes
-    await aggregatorAContract.updateBatterySoC(0, { from: aggregatorA });
-    await aggregatorBContract.updateBatterySoC(1, { from: aggregatorB });
-    await aggregatorAContract.updateBatterySoC(3, { from: aggregatorA });
-
-    const batteryA = await aggregatorAContract.batteries(aggregatorA);
-    const batteryB = await aggregatorBContract.batteries(aggregatorB);
-
-    // Calculate new SoC values
-    const expectedSoCA = Math.ceil(
-      85 - (bid0.amount * 100) / 100 - (bid3.amount * 100) / 100
+    const balanceOwner1 = await market.balances(owner1);
+    const balanceOwner4 = await market.balances(owner4);
+    const balanceAggregator1 = await market.balances(
+      aggregatorContract1.address
     );
-    const expectedSoCB = Math.ceil(90 - (bid1.amount * 100) / 150);
+    const balanceAggregator2 = await market.balances(
+      aggregatorContract2.address
+    );
 
     assert.equal(
-      batteryA.initial_soc.toNumber(),
-      expectedSoCA,
-      "Aggregator A battery SoC not updated correctly"
+      balanceOwner1.toString(),
+      "475",
+      "Owner1 balance incorrect after commission"
     );
     assert.equal(
-      batteryB.initial_soc.toNumber(),
-      expectedSoCB,
-      "Aggregator B battery SoC not updated correctly"
+      balanceOwner4.toString(),
+      "399",
+      "Owner4 balance incorrect after commission"
+    );
+    assert.equal(
+      balanceAggregator1.toString(),
+      "25",
+      "Aggregator1 balance incorrect after commission"
+    );
+    assert.equal(
+      balanceAggregator2.toString(),
+      "21",
+      "Aggregator2 balance incorrect after commission"
     );
   });
+
+  /* it("should settle payments during results announcement", async () => {
+    // Deposit sufficient funds to the market contract for payments
+    await web3.eth.sendTransaction({
+      from: accounts[0],
+      to: market.address,
+      value: web3.utils.toWei("10", "ether"),
+    });
+
+    // Increase time to results announcement + 1 second
+    await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 61);
+
+    await market.settlePayments({ from: accounts[0] });
+
+    // Check that the balances are reset and payments are processed
+    const balanceOwner1 = await market.balances(owner1);
+    const balanceOwner4 = await market.balances(owner4);
+    const balanceAggregator1 = await market.balances(aggregatorContract1.address);
+    const balanceAggregator2 = await market.balances(aggregatorContract2.address);
+
+    assert.equal(balanceOwner1.toString(), "0", "Owner1 balance should be 0 after payment");
+    assert.equal(balanceOwner4.toString(), "0", "Owner4 balance should be 0 after payment");
+    assert.equal(balanceAggregator1.toString(), "0", "Aggregator1 balance should be 0 after payment");
+    assert.equal(balanceAggregator2.toString(), "0", "Aggregator2 balance should be 0 after payment");
+  }); */
 });
