@@ -34,8 +34,15 @@ contract Aggregator {
         batteryAddresses.push(_owner);
     }
 
-    function updateBatterySoC(address _owner, uint _newSoC) public {
-        require(batteries[_owner].owner == _owner, "Battery not found");
-        batteries[_owner].SoC = _newSoC;
+    function updateBatterySoCAfterSale(
+        address _owner,
+        uint _amountSold
+    ) external {
+        Battery storage battery = batteries[_owner];
+        require(battery.owner == _owner, "Battery not found");
+        uint newSoc = uint(
+            battery.SoC - ((_amountSold * 100) / battery.capacity)
+        ); // calculate new SoC
+        battery.SoC = newSoc; // update the SoC
     }
 }

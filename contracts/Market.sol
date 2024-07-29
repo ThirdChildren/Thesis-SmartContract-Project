@@ -16,8 +16,7 @@ contract Market {
     event PurchaseConfirmed(
         address indexed buyer,
         address indexed seller,
-        uint amount,
-        uint price
+        uint bidId
     );
     event CommissionPaid(address indexed aggregator, uint amount);
 
@@ -25,6 +24,7 @@ contract Market {
         address bidder;
         uint amount; // in kWh
         uint price; // in wei per kWh
+        bool isSelected;
     }
 
     mapping(uint => Bid) public bids;
@@ -58,7 +58,7 @@ contract Market {
         _;
     }
 
-    constructor(address _payment) {
+    constructor(address payable _payment) {
         payment = Payment(_payment);
     }
 
@@ -79,7 +79,7 @@ contract Market {
 
     function placeBid(uint _amount, uint _price) public onlyDuringMarketOpen {
         require(_price > 0, "price must be greater than 0");
-        bids[bidCount] = Bid(msg.sender, _amount, _price);
+        bids[bidCount] = Bid(msg.sender, _amount, _price, false);
         emit BidPlaced(msg.sender, _amount, _price);
         bidCount++;
     }
@@ -92,15 +92,14 @@ contract Market {
     function confirmPurchase(
         address _buyer,
         address _seller,
-        uint _amount,
-        uint _price
+        uint _bidId
     ) public onlyDuringAcceptancePeriod {
+        Bid storage bid = bids[_bidId];
+        require(!bid.isSelected, "Bid is already selected");
+        bid.isSelected = true;
+        (uint _amount, uint _price) = (bid.amount, bid.price);
         uint totalCost = _amount * _price;
         address aggregatorAddress = aggregators[_seller];
-        require(
-            aggregatorAddress != address(0),
-            "Aggregator not found for seller"
-        );
         Aggregator aggregator = Aggregator(aggregatorAddress);
 
         uint commission = (totalCost * aggregator.commissionRate()) / 100;
@@ -112,29 +111,30 @@ contract Market {
         balances[aggregatorAddress] += commission;
         balances[_buyer] -= totalCost;
 
-        emit PurchaseConfirmed(_buyer, _seller, _amount, _price);
+        // Update the battery's SoC after the sale
+        aggregator.updateBatterySoCAfterSale(_seller, _amount);
+
+        emit PurchaseConfirmed(_buyer, _seller, _bidId);
         emit CommissionPaid(aggregatorAddress, commission);
     }
 
     function settlePayments() public payable onlyDuringResultsAnnouncement {
         for (uint i = 0; i < bidCount; i++) {
             Bid memory bid = bids[i];
-            address aggregatorAddress = aggregators[bid.bidder];
-            if (balances[aggregatorAddress] > 0) {
-                payment.processPayment(
-                    address(this),
-                    aggregatorAddress,
-                    balances[aggregatorAddress]
+            if (bid.isSelected) {
+                address aggregatorAddress = aggregators[bid.bidder];
+                require(
+                    balances[aggregatorAddress] > 0,
+                    "Aggregator balance is 0"
                 );
-                balances[aggregatorAddress] = 0;
-            }
-            if (balances[bid.bidder] > 0) {
-                payment.processPayment(
-                    address(this),
-                    bid.bidder,
-                    balances[bid.bidder]
-                );
-                balances[bid.bidder] = 0;
+                uint aggregatorBalance = balances[aggregatorAddress];
+                balances[aggregatorAddress] = 0; // reset balance before payment to prevent re-entrancy
+                payment.processPayment(aggregatorAddress, aggregatorBalance);
+
+                require(balances[bid.bidder] > 0, "Bidder balance is 0");
+                uint bidderBalance = balances[bid.bidder];
+                balances[bid.bidder] = 0; // reset balance before payment to prevent re-entrancy
+                payment.processPayment(bid.bidder, bidderBalance);
             }
         }
     }
