@@ -1,6 +1,5 @@
 const Aggregator = artifacts.require("Aggregator");
 const Market = artifacts.require("Market");
-const Payment = artifacts.require("Payment");
 const { time } = require("@openzeppelin/test-helpers");
 const assert = require("assert");
 
@@ -25,9 +24,9 @@ contract("Day Ahead Market Contract", (accounts) => {
   let market;
 
   before(async () => {
-    aggregatorContract1 = await Aggregator.new(5, { from: aggregator1 }); // 5% commission rate
-    aggregatorContract2 = await Aggregator.new(5, { from: aggregator2 }); // 5% commission rate
-    aggregatorContract3 = await Aggregator.new(5, { from: aggregator3 }); // 5% commission rate
+    aggregatorContract1 = await Aggregator.new(5); // 5% commission rate
+    aggregatorContract2 = await Aggregator.new(5); // 5% commission rate
+    aggregatorContract3 = await Aggregator.new(5); // 5% commission rate
     market = await Market.new(adminMarket);
     console.log("Aggregator1: ", aggregatorContract1.address);
     console.log("Aggregator2: ", aggregatorContract2.address);
@@ -43,28 +42,16 @@ contract("Day Ahead Market Contract", (accounts) => {
 
   it("should register batteries", async () => {
     // Register batteries for Aggregator 1
-    await aggregatorContract1.registerBattery(owner1, 100, 80, true, {
-      from: aggregator1,
-    });
-    await aggregatorContract1.registerBattery(owner2, 150, 85, true, {
-      from: aggregator1,
-    });
+    await aggregatorContract1.registerBattery(owner1, 100, 80, true);
+    await aggregatorContract1.registerBattery(owner2, 150, 85, true);
 
     // Register batteries for Aggregator 2
-    await aggregatorContract2.registerBattery(owner3, 120, 70, true, {
-      from: aggregator2,
-    });
-    await aggregatorContract2.registerBattery(owner4, 130, 75, true, {
-      from: aggregator2,
-    });
+    await aggregatorContract2.registerBattery(owner3, 120, 70, true);
+    await aggregatorContract2.registerBattery(owner4, 130, 75, true);
 
     // Register batteries for Aggregator 3
-    await aggregatorContract3.registerBattery(owner5, 180, 90, true, {
-      from: aggregator3,
-    });
-    await aggregatorContract3.registerBattery(owner6, 100, 65, true, {
-      from: aggregator3,
-    });
+    await aggregatorContract3.registerBattery(owner5, 180, 90, true);
+    await aggregatorContract3.registerBattery(owner6, 100, 65, true);
 
     const battery1 = await aggregatorContract1.batteries(owner1);
     const battery2 = await aggregatorContract1.batteries(owner2);
@@ -132,12 +119,12 @@ contract("Day Ahead Market Contract", (accounts) => {
     await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 61);
 
     // Place bids
-    await market.placeBid(owner1, 50, 10, { from: aggregator1 });
-    await market.placeBid(owner2, 75, 12, { from: aggregator1 });
-    await market.placeBid(owner3, 60, 8, { from: aggregator2 });
-    await market.placeBid(owner4, 70, 6, { from: aggregator2 });
-    await market.placeBid(owner5, 80, 15, { from: aggregator3 });
-    await market.placeBid(owner6, 90, 7, { from: aggregator3 });
+    await market.placeBid(aggregator1, owner1, 50, 10);
+    await market.placeBid(aggregator1, owner2, 75, 12);
+    await market.placeBid(aggregator2, owner3, 60, 8);
+    await market.placeBid(aggregator2, owner4, 70, 6);
+    await market.placeBid(aggregator3, owner5, 80, 15);
+    await market.placeBid(aggregator3, owner6, 90, 7);
 
     const bid0 = await market.bids(0);
     const bid1 = await market.bids(1);
@@ -178,11 +165,6 @@ contract("Day Ahead Market Contract", (accounts) => {
   });
 
   it("should accept bids", async () => {
-    // Deposit sufficient funds for the buyer
-    /* await market.depositFunds({
-      from: buyer,
-      value: web3.utils.toWei("2", "ether"),
-    }); */
     // Increase time to market close + 1 second
     await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 3601);
 
@@ -218,8 +200,8 @@ contract("Day Ahead Market Contract", (accounts) => {
     assert.equal(battery1.SoC.toNumber(), 80, "Battery 1 initial SoC mismatch");
     assert.equal(battery4.SoC.toNumber(), 75, "Battery 4 initial SoC mismatch");
 
-    await market.purchaseEnergy(0, { from: buyer, value: price0 });
-    await market.purchaseEnergy(3, { from: buyer, value: price3 });
+    const tx0 = await market.purchaseEnergy(0, { from: buyer, value: price0 });
+    const tx3 = await market.purchaseEnergy(3, { from: buyer, value: price3 });
 
     // Check updated SoC
     battery1 = await aggregatorContract1.batteries(owner1);
@@ -234,6 +216,48 @@ contract("Day Ahead Market Contract", (accounts) => {
       battery4.SoC.toNumber(),
       22,
       "Battery 4 SoC not updated correctly"
+    );
+
+    // Check events to see if payments were recorded
+    const events0 = tx0.logs;
+    const events3 = tx3.logs;
+
+    assert(
+      events0.some(
+        (e) =>
+          e.event === "PaymentToAggregatorOwnerRecorded" &&
+          e.args.bidId.toNumber() === 0 &&
+          e.args.aggregator === aggregator1
+      ),
+      "Payment to aggregatorOwner1 not recorded"
+    );
+    assert(
+      events0.some(
+        (e) =>
+          e.event === "PaymentToBatteryOwnerRecorded" &&
+          e.args.bidId.toNumber() === 0 &&
+          e.args.batteryOwner === owner1
+      ),
+      "Payment to batteryOwner1 not recorded"
+    );
+
+    assert(
+      events3.some(
+        (e) =>
+          e.event === "PaymentToAggregatorOwnerRecorded" &&
+          e.args.bidId.toNumber() === 3 &&
+          e.args.aggregator === aggregator2
+      ),
+      "Payment to aggregatorOwner2 not recorded"
+    );
+    assert(
+      events3.some(
+        (e) =>
+          e.event === "PaymentToBatteryOwnerRecorded" &&
+          e.args.bidId.toNumber() === 3 &&
+          e.args.batteryOwner === owner4
+      ),
+      "Payment to batteryOwner4 not recorded"
     );
   });
 });
