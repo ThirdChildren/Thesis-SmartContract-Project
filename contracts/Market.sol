@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import "./Aggregator.sol";
-import "./Payment.sol";
 
 contract Market {
     uint public marketOpenTime;
@@ -114,6 +113,20 @@ contract Market {
         uint _price
     ) public onlyDuringMarketOpen {
         require(_price > 0, "price must be greater than 0");
+
+        // Ottieni l'indirizzo del contratto dell'aggregator associato
+        address aggregatorAddress = aggregators[_batteryOwner];
+        require(
+            aggregatorAddress != address(0),
+            "Aggregator not found for battery owner"
+        );
+
+        // Instanzia il contratto dell'aggregator
+        Aggregator aggregator = Aggregator(aggregatorAddress);
+        // Verifica che il SoC sia >= 50
+        uint batterySoC = aggregator.getBatterySoC(_batteryOwner);
+        require(batterySoC >= 50, "Battery SoC must be >= 50 to place a bid");
+
         bids[bidCount] = Bid(
             _bidder,
             _batteryOwner,
