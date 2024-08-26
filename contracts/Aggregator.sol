@@ -28,27 +28,31 @@ contract Aggregator {
         address _owner,
         uint _capacity,
         uint _SoC,
-        bool isRegistered,
+        bool isRegistered
     ) external batteryIsNotRegistered {
-        batteries[_owner] = Battery(
-            _owner,
-            _capacity,
-            _SoC,
-            isRegistered
-        );
+        batteries[_owner] = Battery(_owner, _capacity, _SoC, isRegistered);
         batteryAddresses.push(_owner);
     }
 
     function updateBatterySoCAfterSale(
         address _owner,
-        uint _amountSold
+        uint _amountSold,
+        bool _isPositiveReserve
     ) external {
         Battery storage battery = batteries[_owner];
         require(battery.owner == _owner, "Battery not found");
-        uint newSoc = uint(
-            battery.SoC - ((_amountSold * 100) / battery.capacity)
-        ); // calculate new SoC
-        battery.SoC = newSoc; // update the SoC
+        if (_isPositiveReserve) {
+            uint newSoc = uint(
+                battery.SoC - ((_amountSold * 100) / battery.capacity)
+            ); // calculate new SoC
+            battery.SoC = newSoc; // update the SoC
+        } else {
+            uint newSoc = uint(
+                battery.SoC + ((_amountSold * 100) / battery.capacity)
+            ); // calculate new SoC
+            if (newSoc > 100) battery.SoC = 100;
+            else battery.SoC = newSoc;
+        }
     }
 
     // Funzione per ottenere il SoC di una batteria
