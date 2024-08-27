@@ -47,7 +47,6 @@ contract Market {
 
     mapping(uint => Bid) public bids;
     uint public bidCount;
-    mapping(address => uint) public balances; // maps battery owners addresses to their balances
     mapping(address => address) public aggregators; // maps batteries owners addresses to aggregator addresses
 
     modifier onlyMarketAdmin() {
@@ -84,9 +83,6 @@ contract Market {
         _;
     }
 
-    /* constructor(address payable _payment) {
-        payment = Payment(_payment);
-    } */
     constructor(address _marketAdmin) {
         marketAdmin = _marketAdmin;
     }
@@ -188,7 +184,8 @@ contract Market {
         // Update the battery's SoC after the sale
         aggregator.updateBatterySoCAfterSale(
             bids[_bidId].batteryOwner,
-            bids[_bidId].amount
+            bids[_bidId].amount,
+            true
         );
     }
 }
