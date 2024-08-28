@@ -110,16 +110,14 @@ contract Market {
     ) public onlyDuringMarketOpen {
         require(_price > 0, "price must be greater than 0");
 
-        // Ottieni l'indirizzo del contratto dell'aggregator associato
         address aggregatorAddress = aggregators[_batteryOwner];
         require(
             aggregatorAddress != address(0),
             "Aggregator not found for battery owner"
         );
 
-        // Instanzia il contratto dell'aggregator
         Aggregator aggregator = Aggregator(aggregatorAddress);
-        // Verifica che il SoC sia >= 50
+        // Verify that the battery's SoC is greater than 50%
         uint batterySoC = aggregator.getBatterySoC(_batteryOwner);
         require(batterySoC >= 50, "Battery SoC must be >= 50 to place a bid");
 
@@ -162,7 +160,7 @@ contract Market {
         address aggregatorAddress = aggregators[bids[_bidId].batteryOwner];
         Aggregator aggregator = Aggregator(aggregatorAddress);
 
-        //calcolo commissioni e pagamento finale
+        // commission calculation
         uint commission = (msg.value * aggregator.commissionRate()) / 100;
 
         payable(owner).transfer(commission);

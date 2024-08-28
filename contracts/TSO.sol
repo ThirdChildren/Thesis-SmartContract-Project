@@ -21,6 +21,10 @@ contract TSO {
     bool public isPositiveReserve; // True for positive reserve, False for negative reserve
     address public tsoAdmin;
 
+    uint public nextBidIndex; // Indice della prossima bid da selezionare
+    uint public nextPaymentIndex; // Indice del prossimo pagamento da elaborare
+    uint public totalSelectedEnergy; // Energia totale selezionata
+
     event MarketOpened(uint requiredEnergy, bool isPositiveReserve);
     event BidPlaced(
         address indexed bidder,
@@ -71,14 +75,15 @@ contract TSO {
         uint _amount,
         uint _price
     ) external onlyWhenMarketOpen {
+        uint batterySoC = aggregator.getBatterySoC(msg.sender);
         if (isPositiveReserve) {
-            uint batterySoC = aggregator.getBatterySoC(msg.sender);
             require(batterySoC >= 50, "Insufficient SoC to join the market");
+        } else {
+            require(batterySoC < 100, "Battery is full");
         }
 
         require(_price > 0, "price must be greater than 0");
 
-        // Ottieni l'indirizzo del contratto dell'aggregator associato
         address aggregatorAddress = aggregators[_batteryOwner];
         require(
             aggregatorAddress != address(0),
@@ -96,51 +101,53 @@ contract TSO {
         emit MarketClosed();
     }
 
-    function selectBids() external onlyTsoAdmin {
+    function selectNextBid() external onlyTsoAdmin {
         require(!marketOpen, "Market is still open");
-        uint energySelected = 0;
-        for (uint i = 0; i < bidCount; i++) {
-            if (energySelected < requiredEnergy) {
-                bids[i].isSelected = true;
-                energySelected += bids[i].amount;
-                emit BidSelected(
-                    bids[i].batteryOwner,
-                    bids[i].amount,
-                    bids[i].price
-                );
-            }
+        require(nextBidIndex < bidCount, "All bids processed");
+
+        uint energySelected = totalSelectedEnergy; // Track total selected energy
+        if (energySelected < requiredEnergy) {
+            bids[nextBidIndex].isSelected = true;
+            energySelected += bids[nextBidIndex].amount;
+            totalSelectedEnergy = energySelected; // Update the total selected energy
+            emit BidSelected(
+                bids[nextBidIndex].batteryOwner,
+                bids[nextBidIndex].amount,
+                bids[nextBidIndex].price
+            );
         }
+        nextBidIndex++; // Move to the next bid
     }
 
-    function processPayments() external {
+    function processNextPayment() external {
         require(!marketOpen, "Market is still open");
+        require(nextPaymentIndex < bidCount, "All payments processed");
 
-        for (uint i = 0; i < bidCount; i++) {
-            if (bids[i].isSelected) {
-                uint payment = bids[i].amount * bids[i].price;
-                uint commission = (payment * aggregator.commissionRate()) / 100;
+        Bid storage bid = bids[nextPaymentIndex];
+        if (bid.isSelected) {
+            uint payment = bid.amount * bid.price;
+            uint commission = (payment * aggregator.commissionRate()) / 100;
 
-                // Paga il proprietario della batteria
-                payable(bids[i].batteryOwner).transfer(payment - commission);
-                emit PaymentToBatteryOwnerRecorded(
-                    bids[i].batteryOwner,
-                    payment - commission
-                ); // Log payment to battery owner
+            // Pay battery owner
+            payable(bid.batteryOwner).transfer(payment - commission);
+            emit PaymentToBatteryOwnerRecorded(
+                bid.batteryOwner,
+                payment - commission
+            );
 
-                // Paga l'aggregatore
-                payable(address(aggregator)).transfer(commission);
-                emit PaymentToAggregatorOwnerRecorded(
-                    bids[i].bidder,
-                    commission
-                ); // Log payment to aggregator owner
+            // Pay aggregator
+            payable(address(aggregator)).transfer(commission);
+            emit PaymentToAggregatorOwnerRecorded(bid.bidder, commission);
 
-                // Aggiorna il SoC della batteria
-                aggregator.updateBatterySoCAfterSale(
-                    bids[i].batteryOwner,
-                    bids[i].amount,
-                    isPositiveReserve
-                );
-            }
+            // Update battery SoC only if positive reserve
+            // Update battery SoC
+            aggregator.updateBatterySoCAfterSale(
+                bid.batteryOwner,
+                bid.amount,
+                isPositiveReserve
+            );
         }
+
+        nextPaymentIndex++; // Move to the next payment
     }
 }
