@@ -5,7 +5,7 @@ import "./Aggregator.sol";
 
 contract TSO {
     struct Bid {
-        address bidder;
+        address bidder; // Address of the aggregator that placed the bid
         address batteryOwner;
         uint amount; // in kWh
         uint price; // in wei per kWh
@@ -72,17 +72,19 @@ contract TSO {
     function placeBid(
         address _bidder,
         address _batteryOwner,
-        uint _amount,
-        uint _price
+        uint _amountInKWh, // Volume in kWh
+        uint _pricePerMWh // Price in EUR/MWh
     ) external onlyWhenMarketOpen {
-        uint batterySoC = aggregator.getBatterySoC(msg.sender);
+        uint batterySoC = aggregator.getBatterySoC(_batteryOwner);
+
         if (isPositiveReserve) {
-            require(batterySoC >= 50, "Insufficient SoC to join the market");
+            require(batterySoC >= 40, "Insufficient SoC to join the market");
         } else {
             require(batterySoC < 100, "Battery is full");
         }
 
-        require(_price > 0, "price must be greater than 0");
+        // Check if price is positive
+        require(_pricePerMWh > 0, "Price must be greater than 0");
 
         address aggregatorAddress = aggregators[_batteryOwner];
         require(
@@ -90,8 +92,19 @@ contract TSO {
             "Aggregator not found for battery owner"
         );
 
-        bids[bidCount] = Bid(_bidder, _batteryOwner, _amount, _price, false);
-        emit BidPlaced(_bidder, _batteryOwner, _amount, _price);
+        // Calculating the price per kWh
+        uint _pricePerKWh = (_pricePerMWh * _amountInKWh) / 1000;
+
+        bids[bidCount] = Bid(
+            _bidder,
+            _batteryOwner,
+            _amountInKWh,
+            _pricePerKWh,
+            false
+        );
+
+        emit BidPlaced(_bidder, _batteryOwner, _amountInKWh, _pricePerKWh);
+
         bidCount++;
     }
 

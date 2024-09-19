@@ -99,7 +99,7 @@ module.exports = {
     development: {
       host: "172.20.208.1",
       port: 8545,
-      network_id: "*",
+      network_id: "5777",
     },
   },
 
