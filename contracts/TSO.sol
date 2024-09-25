@@ -9,20 +9,21 @@ contract TSO {
         address batteryOwner;
         uint amount; // in kWh
         uint price; // in wei per kWh
+        uint bidIndex;
         bool isSelected;
     }
 
     Aggregator public aggregator;
     mapping(address => address) public aggregators; // maps batteries owners addresses to aggregator addresses
     mapping(uint => Bid) public bids;
-    uint public bidCount;
+
     bool public marketOpen;
     uint public requiredEnergy; // energy need from TSO
     bool public isPositiveReserve; // True for positive reserve, False for negative reserve
     address public tsoAdmin;
 
-    uint public nextBidIndex; // Indice della prossima bid da selezionare
-    uint public nextPaymentIndex; // Indice del prossimo pagamento da elaborare
+    //uint public nextBidIndex; // Indice della prossima bid da selezionare
+    //uint public nextPaymentIndex; // Indice del prossimo pagamento da elaborare
     uint public totalSelectedEnergy; // Energia totale selezionata
 
     event MarketOpened(uint requiredEnergy, bool isPositiveReserve);
@@ -30,10 +31,16 @@ contract TSO {
         address indexed bidder,
         address batteryOwner,
         uint amount,
-        uint price
+        uint price,
+        uint bidIndex
     );
     event MarketClosed();
-    event BidSelected(address indexed batteryOwner, uint amount, uint price);
+    event BidSelected(
+        address indexed batteryOwner,
+        uint amount,
+        uint price,
+        uint bidIndex
+    );
     event PaymentToAggregatorOwnerRecorded(
         address indexed bidder,
         uint commission
@@ -73,7 +80,8 @@ contract TSO {
         address _bidder,
         address _batteryOwner,
         uint _amountInKWh, // Volume in kWh
-        uint _pricePerMWh // Price in EUR/MWh
+        uint _pricePerMWh, // Price in EUR/MWh
+        uint _bidIndex
     ) external onlyWhenMarketOpen {
         uint batterySoC = aggregator.getBatterySoC(_batteryOwner);
 
@@ -95,17 +103,22 @@ contract TSO {
         // Calculating the price per kWh
         uint _pricePerKWh = (_pricePerMWh * _amountInKWh) / 1000;
 
-        bids[bidCount] = Bid(
+        bids[_bidIndex] = Bid(
             _bidder,
             _batteryOwner,
             _amountInKWh,
             _pricePerKWh,
+            _bidIndex,
             false
         );
 
-        emit BidPlaced(_bidder, _batteryOwner, _amountInKWh, _pricePerKWh);
-
-        bidCount++;
+        emit BidPlaced(
+            _bidder,
+            _batteryOwner,
+            _amountInKWh,
+            _pricePerKWh,
+            _bidIndex
+        );
     }
 
     function closeMarket() external {
@@ -114,9 +127,9 @@ contract TSO {
         emit MarketClosed();
     }
 
-    function selectNextBid() external onlyTsoAdmin {
+    function selectNextBid(uint nextBidIndex) external onlyTsoAdmin {
         require(!marketOpen, "Market is still open");
-        require(nextBidIndex < bidCount, "All bids processed");
+        //require(nextBidIndex < bidCount, "All bids processed");
 
         uint energySelected = totalSelectedEnergy; // Track total selected energy
         if (energySelected < requiredEnergy) {
@@ -126,15 +139,16 @@ contract TSO {
             emit BidSelected(
                 bids[nextBidIndex].batteryOwner,
                 bids[nextBidIndex].amount,
-                bids[nextBidIndex].price
+                bids[nextBidIndex].price,
+                bids[nextBidIndex].bidIndex
             );
         }
-        nextBidIndex++; // Move to the next bid
+        //nextBidIndex++; // Move to the next bid
     }
 
-    function processNextPayment() external {
+    function processNextPayment(uint nextPaymentIndex) external onlyTsoAdmin {
         require(!marketOpen, "Market is still open");
-        require(nextPaymentIndex < bidCount, "All payments processed");
+        //require(nextPaymentIndex < bidCount, "All payments processed");
 
         Bid storage bid = bids[nextPaymentIndex];
         if (bid.isSelected) {
@@ -160,7 +174,9 @@ contract TSO {
                 isPositiveReserve
             );
         }
+    }
 
-        nextPaymentIndex++; // Move to the next payment
+    function getBidIndex(uint _index) public view returns (uint) {
+        return bids[_index].bidIndex;
     }
 }

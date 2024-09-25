@@ -1,4 +1,4 @@
 const TSO = artifacts.require("TSO");
 module.exports = function (deployer) {
-  deployer.deploy(TSO, "0xEdD7209c8c3411944d274F6eA02e71cC97f5189e");
+  deployer.deploy(TSO, "0x243431523a071F518A5bEb7304FdeE8E7903FE8D");
 };
