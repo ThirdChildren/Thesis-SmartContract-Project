@@ -65,4 +65,8 @@ contract Aggregator {
         );
         return batteries[_batteryOwner].SoC;
     }
+
+    function getAggregatorAdmin() public view returns (address) {
+        return aggregatorAdmin;
+    }
 }

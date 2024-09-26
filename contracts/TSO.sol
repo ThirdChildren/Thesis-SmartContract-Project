@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "./Aggregator.sol";
+import "hardhat/console.sol";
 
 contract TSO {
     struct Bid {
@@ -9,11 +10,10 @@ contract TSO {
         address batteryOwner;
         uint amount; // in kWh
         uint price; // in wei per kWh
-        uint bidIndex;
         bool isSelected;
     }
 
-    Aggregator public aggregator;
+    //Aggregator public aggregator;
     mapping(address => address) public aggregators; // maps batteries owners addresses to aggregator addresses
     mapping(uint => Bid) public bids;
 
@@ -22,6 +22,7 @@ contract TSO {
     bool public isPositiveReserve; // True for positive reserve, False for negative reserve
     address public tsoAdmin;
     address public aggregatorOwner;
+    uint public bidCount;
 
     //uint public nextBidIndex; // Indice della prossima bid da selezionare
     //uint public nextPaymentIndex; // Indice del prossimo pagamento da elaborare
@@ -32,16 +33,10 @@ contract TSO {
         address indexed bidder,
         address batteryOwner,
         uint amount,
-        uint price,
-        uint bidIndex
+        uint price
     );
     event MarketClosed();
-    event BidSelected(
-        address indexed batteryOwner,
-        uint amount,
-        uint price,
-        uint bidIndex
-    );
+    event BidSelected(address indexed batteryOwner, uint amount, uint price);
     event PaymentToAggregatorOwnerRecorded(
         address indexed bidder,
         uint commission
@@ -59,13 +54,13 @@ contract TSO {
         _;
     }
 
-    modifier onlyAggregatorOwner() {
+    /* modifier onlyAggregatorOwner() {
         require(
-            msg.sender == aggregator.aggregatorAdmin(),
+            msg.sender == aggregator.getAggregatorAdmin(),
             "Only the Aggregator Owner can perform this action"
         );
         _;
-    }
+    } */
 
     modifier onlyWhenMarketOpen() {
         require(marketOpen, "Market is not open");
@@ -74,6 +69,10 @@ contract TSO {
 
     constructor(address _tsoAdmin) {
         tsoAdmin = _tsoAdmin;
+    }
+
+    function setAggregator(address _owner, address _aggregator) public {
+        aggregators[_owner] = _aggregator;
     }
 
     function openMarket(
@@ -90,9 +89,16 @@ contract TSO {
         address _bidder,
         address _batteryOwner,
         uint _amountInKWh, // Volume in kWh
-        uint _pricePerMWh, // Price in EUR/MWh
-        uint _bidIndex
+        uint _pricePerMWh // Price in EUR/MWh
     ) external onlyWhenMarketOpen {
+        address aggregatorAddress = aggregators[_batteryOwner];
+        require(
+            aggregatorAddress != address(6),
+            "Aggregator not found for battery owner"
+        );
+
+        Aggregator aggregator = Aggregator(aggregatorAddress);
+
         uint batterySoC = aggregator.getBatterySoC(_batteryOwner);
 
         if (isPositiveReserve) {
@@ -104,31 +110,24 @@ contract TSO {
         // Check if price is positive
         require(_pricePerMWh > 0, "Price must be greater than 0");
 
-        address aggregatorAddress = aggregators[_batteryOwner];
-        require(
-            aggregatorAddress != address(0),
-            "Aggregator not found for battery owner"
-        );
-
         // Calculating the price per kWh
         //uint _pricePerKWh = (_pricePerMWh * _amountInKWh) / 1000;
 
-        bids[_bidIndex] = Bid(
+        bids[bidCount] = Bid(
             _bidder,
             _batteryOwner,
             _amountInKWh,
             _pricePerMWh,
-            _bidIndex,
             false
         );
 
-        emit BidPlaced(
-            _bidder,
-            _batteryOwner,
-            _amountInKWh,
-            _pricePerMWh,
-            _bidIndex
-        );
+        console.log("Bid placed by: ", _bidder);
+        console.log("Battery owner: ", _batteryOwner);
+        console.log("Bid amount: ", _amountInKWh, " kWh");
+        console.log("Bid price: ", _pricePerMWh, " EUR/MWh");
+
+        emit BidPlaced(_bidder, _batteryOwner, _amountInKWh, _pricePerMWh);
+        bidCount++;
     }
 
     function closeMarket() external {
@@ -137,56 +136,59 @@ contract TSO {
         emit MarketClosed();
     }
 
-    function selectNextBid(uint nextBidIndex) external onlyTsoAdmin {
+    function acceptBid(uint _bidId) external onlyTsoAdmin {
         require(!marketOpen, "Market is still open");
         //require(nextBidIndex < bidCount, "All bids processed");
 
         uint energySelected = totalSelectedEnergy; // Track total selected energy
         if (energySelected < requiredEnergy) {
-            bids[nextBidIndex].isSelected = true;
-            energySelected += bids[nextBidIndex].amount;
+            bids[_bidId].isSelected = true;
+            energySelected += bids[_bidId].amount;
             totalSelectedEnergy = energySelected; // Update the total selected energy
             emit BidSelected(
-                bids[nextBidIndex].batteryOwner,
-                bids[nextBidIndex].amount,
-                bids[nextBidIndex].price,
-                bids[nextBidIndex].bidIndex
+                bids[_bidId].batteryOwner,
+                bids[_bidId].amount,
+                bids[_bidId].price
             );
+        } else {
+            console.log("Energy selected is greater than required energy");
         }
-        //nextBidIndex++; // Move to the next bid
     }
 
-    function processNextPayment(uint nextPaymentIndex) external onlyTsoAdmin {
+    function processPayment(uint _bidId) public payable {
+        require(bids[_bidId].isSelected, "Bid not accepted");
+        require(
+            msg.value == bids[_bidId].amount * bids[_bidId].price,
+            "Insufficient funds"
+        );
+        address owner = bids[_bidId].bidder;
+        address batteryOwner = bids[_bidId].batteryOwner;
+
+        address aggregatorAddress = aggregators[bids[_bidId].batteryOwner];
+        Aggregator aggregator = Aggregator(aggregatorAddress);
+
         require(!marketOpen, "Market is still open");
         //require(nextPaymentIndex < bidCount, "All payments processed");
 
-        Bid storage bid = bids[nextPaymentIndex];
-        if (bid.isSelected) {
-            uint payment = bid.amount * bid.price;
-            uint commission = (payment * aggregator.commissionRate()) / 100;
+        uint commission = (msg.value * aggregator.commissionRate()) / 100;
 
-            // Pay battery owner
-            payable(bid.batteryOwner).transfer(payment - commission);
-            emit PaymentToBatteryOwnerRecorded(
-                bid.batteryOwner,
-                payment - commission
-            );
+        // Pay battery owner
+        payable(batteryOwner).transfer(msg.value - commission);
+        emit PaymentToBatteryOwnerRecorded(
+            batteryOwner,
+            msg.value - commission
+        );
 
-            // Pay aggregator
-            payable(address(aggregator)).transfer(commission);
-            emit PaymentToAggregatorOwnerRecorded(bid.bidder, commission);
+        // Pay aggregator
+        payable(address(aggregator)).transfer(commission);
+        emit PaymentToAggregatorOwnerRecorded(owner, commission);
 
-            // Update battery SoC
-            aggregator.updateBatterySoCAfterSale(
-                bid.batteryOwner,
-                bid.amount,
-                isPositiveReserve
-            );
-        }
-    }
-
-    function getBidIndex(uint _index) public view returns (uint) {
-        return bids[_index].bidIndex;
+        // Update battery SoC
+        aggregator.updateBatterySoCAfterSale(
+            batteryOwner,
+            bids[_bidId].amount,
+            isPositiveReserve
+        );
     }
 
     function getBatteryOwner(uint _index) public view returns (address) {

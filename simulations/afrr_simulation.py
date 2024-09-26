@@ -17,7 +17,7 @@ if web3.is_connected():
 else:
     print("Connection failed")
 
-# Imposta l'account amministratore (il primo account di Ganache)
+admin_account = web3.eth.accounts[0]
 aggregator_admin_account = web3.eth.accounts[6]
 tso_admin_account = web3.eth.accounts[7]
 
@@ -28,7 +28,6 @@ with open('./artifacts/contracts/TSO.sol/TSO.json') as f:
 # Estrai l'ABI e l'indirizzo del contratto TSO
 tso_abi = tso_data['abi']
 tso_address = os.getenv("TSO_CONTRACT_ADDRESS")  # Indirizzo del contratto TSO
-print(f"TSO address: {tso_address}")
 
 # Carica il file Aggregator.json
 with open('./artifacts/contracts/Aggregator.sol/Aggregator.json') as f:
@@ -37,7 +36,6 @@ with open('./artifacts/contracts/Aggregator.sol/Aggregator.json') as f:
 # Estrai l'ABI e l'indirizzo del contratto Aggregator
 aggregator_abi = aggregator_data['abi']
 aggregator_address = os.getenv("AGGREGATOR_CONTRACT_ADDRESS")  # Indirizzo del contratto Aggregator
-print(f"Aggregator address: {aggregator_address}")
 
 # Inizializza il contratto
 tso_contract = web3.eth.contract(address=tso_address, abi=tso_abi)
@@ -92,21 +90,15 @@ def simulate_market_session():
                 bid_amount = 100  # Simuliamo una bid tra 80 e 150 kWh
                 bid_price = 90 + battery_index  # Prezzo della bid (varia tra le batterie)
 
-                nonce = web3.eth.get_transaction_count(aggregator_account)
                 tso_contract.functions.placeBid(
-                    aggregator_account,  # Aggregatore
+                    aggregator_admin_account,  # Aggregatore
                     battery_owner,  # Proprietario della batteria
                     bid_amount,  # Volume in kWh
                     bid_price,  # Prezzo in EUR/MWh
                     battery_index - 1  # Indice della batteria
-                ).transact({
-                    'from': tso_admin_account,
-                    'nonce': nonce,
-                    'gas': 2000000,
-                    'gasPrice': web3.to_wei('20', 'Gwei')
-                })
+                ).transact({'from': tso_admin_account})
                 
-                print(f"Aggregator {aggregator_account} placed a bid with {bid_amount} kWh at {bid_price} EUR/MWh")
+                print(f"Aggregator {aggregator_admin_account} placed a bid with {bid_amount} kWh at {bid_price} EUR/MWh")
                 print(f"Bid index is: {tso_contract.functions.getBidIndex(bid_count).call()}")
                 bid_count += 1
                 return True
@@ -144,6 +136,6 @@ def simulate_market_session():
     print("Market simulation complete.")
 
 # Registra le batterie
-register_batteries()
+#register_batteries()
 # Simula la sessione di mercato
-#simulate_market_session()
+simulate_market_session()

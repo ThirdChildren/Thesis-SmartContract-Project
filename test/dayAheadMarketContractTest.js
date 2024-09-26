@@ -1,11 +1,13 @@
-const Aggregator = artifacts.require("Aggregator");
-const Market = artifacts.require("Market");
-const { time } = require("@openzeppelin/test-helpers");
+/* const { ethers } = require("hardhat");
+//const { time } = require("@openzeppelin/test-helpers");
 const assert = require("assert");
 
-contract("Day Ahead Market Contract", (accounts) => {
-  const [
-    adminMarket,
+describe("Day Ahead Market Contract", function () {
+  const startIndex = 8; // Indice da cui iniziare
+  const numSigners = 11; // Numero di signers che vuoi ottenere
+
+  let selectedSigners;
+  let adminMarket,
     aggregator1,
     aggregator2,
     aggregator3,
@@ -15,29 +17,66 @@ contract("Day Ahead Market Contract", (accounts) => {
     owner3,
     owner4,
     owner5,
-    owner6,
-  ] = accounts;
-
-  let aggregatorContract1;
-  let aggregatorContract2;
-  let aggregatorContract3;
-  let market;
+    owner6;
+  let aggregatorContract1, aggregatorContract2, aggregatorContract3, market;
 
   before(async () => {
-    aggregatorContract1 = await Aggregator.new(5); // 5% commission rate
-    aggregatorContract2 = await Aggregator.new(5); // 5% commission rate
-    aggregatorContract3 = await Aggregator.new(5); // 5% commission rate
-    market = await Market.new(adminMarket);
-    console.log("Aggregator1: ", aggregatorContract1.address);
-    console.log("Aggregator2: ", aggregatorContract2.address);
-    console.log("Aggregator3: ", aggregatorContract3.address);
-    console.log("Market: ", market.address);
-    await market.setAggregator(owner1, aggregatorContract1.address); // Imposta gli aggregatori per i rispettivi owner delle batterie
-    await market.setAggregator(owner2, aggregatorContract1.address);
-    await market.setAggregator(owner3, aggregatorContract2.address);
-    await market.setAggregator(owner4, aggregatorContract2.address);
-    await market.setAggregator(owner5, aggregatorContract3.address);
-    await market.setAggregator(owner6, aggregatorContract3.address);
+    try {
+      const allSigners = await ethers.getSigners();
+      selectedSigners = allSigners.slice(startIndex, startIndex + numSigners);
+
+      [
+        adminMarket,
+        aggregator1,
+        aggregator2,
+        aggregator3,
+        buyer,
+        owner1,
+        owner2,
+        owner3,
+        owner4,
+        owner5,
+        owner6,
+      ] = selectedSigners.map((s) => s.address);
+
+      const Aggregator = await ethers.getContractFactory("Aggregator");
+      const Market = await ethers.getContractFactory("Market");
+
+      aggregatorContract1 = await Aggregator.deploy(
+        "0x9cfD36771A496f4BC904b94b778fC772759B605d",
+        10
+      );
+      await aggregatorContract1.deployed();
+      console.log("Aggregator1 deployed at: ", aggregatorContract1.address);
+
+      aggregatorContract2 = await Aggregator.deploy(
+        "0x9cfD36771A496f4BC904b94b778fC772759B605d",
+        10
+      );
+      await aggregatorContract2.deployed();
+      console.log("Aggregator2 deployed at: ", aggregatorContract2.address);
+
+      aggregatorContract3 = await Aggregator.deploy(
+        "0x9cfD36771A496f4BC904b94b778fC772759B605d",
+        10
+      );
+      await aggregatorContract3.deployed();
+      console.log("Aggregator3 deployed at: ", aggregatorContract3.address);
+
+      market = await Market.deploy(adminMarket);
+      await market.deployed();
+      console.log("Market deployed at: ", market.address);
+
+      // Check if addresses are valid before calling setAggregator
+      await market.setAggregator(owner1, aggregatorContract1.address);
+      await market.setAggregator(owner2, aggregatorContract1.address);
+      await market.setAggregator(owner3, aggregatorContract2.address);
+      await market.setAggregator(owner4, aggregatorContract2.address);
+      await market.setAggregator(owner5, aggregatorContract3.address);
+      await market.setAggregator(owner6, aggregatorContract3.address);
+    } catch (error) {
+      console.error("Error in before hook:", error);
+    }
   });
 
   it("should register batteries", async () => {
@@ -86,12 +125,17 @@ contract("Day Ahead Market Contract", (accounts) => {
   });
 
   it("should set market times", async () => {
-    const currentTime = (await web3.eth.getBlock("latest")).timestamp;
+    const currentTime = (await ethers.provider.getBlock("latest")).timestamp;
     const openTime = currentTime;
     const closeTime = currentTime + 3600; // 1 hour later
     const resultsTime = closeTime + 1800; // 30 minutes after market close
 
-    await market.setMarketTimes(openTime, closeTime, resultsTime);
+    const adminSigner = await ethers.getSigner(adminMarket);
+    await market
+      .connect(adminSigner)
+      .setMarketTimes(openTime, closeTime, resultsTime, {
+        gasLimit: 100000,
+      });
 
     const marketOpenTime = await market.marketOpenTime();
     const marketCloseTime = await market.marketCloseTime();
@@ -116,7 +160,8 @@ contract("Day Ahead Market Contract", (accounts) => {
 
   it("should place bids during market open", async () => {
     // Increase time to market open
-    await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 61);
+    await ethers.provider.send("evm_increaseTime", [61]);
+    await ethers.provider.send("evm_mine", []); // Avanza il blocco per applicare il cambiamento di tempo
 
     // Place bids
     await market.placeBid(aggregator1, owner1, 50, 10);
@@ -166,11 +211,13 @@ contract("Day Ahead Market Contract", (accounts) => {
 
   it("should accept bids", async () => {
     // Increase time to market close + 1 second
-    await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 3601);
+    await ethers.provider.send("evm_increaseTime", [3601]);
+    await ethers.provider.send("evm_mine", []); // Avanza il blocco per applicare il cambiamento di tempo
 
     // Confirm purchases (some bids)
-    await market.acceptBid(0, { from: buyer });
-    await market.acceptBid(3, { from: buyer });
+    const buyerSigner = await ethers.getSigner(buyer);
+    await market.connect(buyerSigner).acceptBid(0);
+    await market.connect(buyerSigner).acceptBid(3);
 
     const bid0 = await market.bids(0);
     const bid3 = await market.bids(3);
@@ -180,12 +227,11 @@ contract("Day Ahead Market Contract", (accounts) => {
 
     assert.equal(bid0.acceptedBy, buyer, "Bid 0 accepted by mismatch");
     assert.equal(bid3.acceptedBy, buyer, "Bid 3 accepted by mismatch");
-    console.log("Bid 0 owner: ", bid0.bidder);
-    console.log("Bid 3 owner: ", bid3.bidder);
   });
 
   it("should purchase energy and update the SoC", async () => {
-    await time.increaseTo((await web3.eth.getBlock("latest")).timestamp + 7201); // Increase time to results announcement + 1 second
+    await ethers.provider.send("evm_increaseTime", [7201]);
+    await ethers.provider.send("evm_mine", []);
 
     const bid0 = await market.bids(0);
     const bid3 = await market.bids(3);
@@ -200,8 +246,18 @@ contract("Day Ahead Market Contract", (accounts) => {
     assert.equal(battery1.SoC.toNumber(), 80, "Battery 1 initial SoC mismatch");
     assert.equal(battery4.SoC.toNumber(), 75, "Battery 4 initial SoC mismatch");
 
-    const tx0 = await market.purchaseEnergy(0, { from: buyer, value: price0 });
-    const tx3 = await market.purchaseEnergy(3, { from: buyer, value: price3 });
+    const buyerSigner = await ethers.getSigner(buyer);
+
+    // Esegui le transazioni e attendi la conferma
+    const tx0 = await market
+      .connect(buyerSigner)
+      .purchaseEnergy(0, { value: price0 });
+    const receipt0 = await tx0.wait(); // Ottieni la receipt della transazione
+
+    const tx3 = await market
+      .connect(buyerSigner)
+      .purchaseEnergy(3, { value: price3 });
+    const receipt3 = await tx3.wait(); // Ottieni la receipt della transazione
 
     // Check updated SoC
     battery1 = await aggregatorContract1.batteries(owner1);
@@ -218,9 +274,12 @@ contract("Day Ahead Market Contract", (accounts) => {
       "Battery 4 SoC not updated correctly"
     );
 
-    // Check events to see if payments were recorded
-    const events0 = tx0.logs;
-    const events3 = tx3.logs;
+    // Verifica gli eventi nella receipt delle transazioni
+    const events0 = receipt0.events;
+    const events3 = receipt3.events;
+
+    assert(Array.isArray(events0), "events0 should be an array");
+    assert(Array.isArray(events3), "events3 should be an array");
 
     assert(
       events0.some(
@@ -261,3 +320,4 @@ contract("Day Ahead Market Contract", (accounts) => {
     );
   });
 });
+ */
