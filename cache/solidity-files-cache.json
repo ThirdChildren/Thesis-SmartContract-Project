@@ -1,0 +1,114 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/Aggregator.sol": {
+      "lastModificationDate": 1727262002194,
+      "contentHash": "4c3f14c36a282d0d36fc71d21131eae7",
+      "sourceName": "contracts/Aggregator.sol",
+      "solcConfig": {
+        "version": "0.8.9",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.9"
+      ],
+      "artifacts": [
+        "Aggregator"
+      ]
+    },
+    "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/TSO.sol": {
+      "lastModificationDate": 1727337767510,
+      "contentHash": "3cc61561870743981dba737ad283c1eb",
+      "sourceName": "contracts/TSO.sol",
+      "solcConfig": {
+        "version": "0.8.9",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Aggregator.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.9"
+      ],
+      "artifacts": [
+        "TSO"
+      ]
+    },
+    "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/Market.sol": {
+      "lastModificationDate": 1724833252280,
+      "contentHash": "ad600707fa9ff0fc0c557c6f96ed025a",
+      "sourceName": "contracts/Market.sol",
+      "solcConfig": {
+        "version": "0.8.9",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Aggregator.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.9"
+      ],
+      "artifacts": [
+        "Market"
+      ]
+    }
+  }
+}

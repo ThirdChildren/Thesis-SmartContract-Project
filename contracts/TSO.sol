@@ -21,6 +21,7 @@ contract TSO {
     uint public requiredEnergy; // energy need from TSO
     bool public isPositiveReserve; // True for positive reserve, False for negative reserve
     address public tsoAdmin;
+    address public aggregatorOwner;
 
     //uint public nextBidIndex; // Indice della prossima bid da selezionare
     //uint public nextPaymentIndex; // Indice del prossimo pagamento da elaborare
@@ -57,6 +58,15 @@ contract TSO {
         );
         _;
     }
+
+    modifier onlyAggregatorOwner() {
+        require(
+            msg.sender == aggregator.aggregatorAdmin(),
+            "Only the Aggregator Owner can perform this action"
+        );
+        _;
+    }
+
     modifier onlyWhenMarketOpen() {
         require(marketOpen, "Market is not open");
         _;
@@ -101,13 +111,13 @@ contract TSO {
         );
 
         // Calculating the price per kWh
-        uint _pricePerKWh = (_pricePerMWh * _amountInKWh) / 1000;
+        //uint _pricePerKWh = (_pricePerMWh * _amountInKWh) / 1000;
 
         bids[_bidIndex] = Bid(
             _bidder,
             _batteryOwner,
             _amountInKWh,
-            _pricePerKWh,
+            _pricePerMWh,
             _bidIndex,
             false
         );
@@ -116,7 +126,7 @@ contract TSO {
             _bidder,
             _batteryOwner,
             _amountInKWh,
-            _pricePerKWh,
+            _pricePerMWh,
             _bidIndex
         );
     }
@@ -166,7 +176,6 @@ contract TSO {
             payable(address(aggregator)).transfer(commission);
             emit PaymentToAggregatorOwnerRecorded(bid.bidder, commission);
 
-            // Update battery SoC only if positive reserve
             // Update battery SoC
             aggregator.updateBatterySoCAfterSale(
                 bid.batteryOwner,
@@ -178,5 +187,13 @@ contract TSO {
 
     function getBidIndex(uint _index) public view returns (uint) {
         return bids[_index].bidIndex;
+    }
+
+    function getBatteryOwner(uint _index) public view returns (address) {
+        return bids[_index].batteryOwner;
+    }
+
+    function getBidder(uint _index) public view returns (address) {
+        return bids[_index].bidder;
     }
 }

@@ -3,5 +3,13 @@
     "@openzeppelin/test-helpers": "^0.5.16",
     "assert": "^2.1.0",
     "truffle": "^5.11.5"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-ganache": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "ethereum-waffle": "^4.0.10",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.22.12"
   }
 }

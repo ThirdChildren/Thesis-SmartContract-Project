@@ -11,6 +11,7 @@ contract Aggregator {
 
     mapping(address => Battery) public batteries;
     address[] public batteryAddresses;
+    address public aggregatorAdmin;
     uint public commissionRate; // Commission rate in percentage, e.g., 5 for 5%
 
     modifier batteryIsNotRegistered() {
@@ -20,7 +21,8 @@ contract Aggregator {
         );
         _;
     }
-    constructor(uint _commissionRate) {
+    constructor(address _aggregatorAdmin, uint _commissionRate) {
+        aggregatorAdmin = _aggregatorAdmin;
         commissionRate = _commissionRate;
     }
 

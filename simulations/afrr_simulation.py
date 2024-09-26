@@ -1,6 +1,11 @@
 import json
+import os
 from web3 import Web3
 import time
+from dotenv import load_dotenv
+
+# Carica le variabili dal file .env
+load_dotenv()
 
 # Connessione a Ganache
 ganache_url = "http://172.20.208.1:7545"
@@ -13,24 +18,26 @@ else:
     print("Connection failed")
 
 # Imposta l'account amministratore (il primo account di Ganache)
-admin_account = web3.eth.accounts[0]
-aggregator_account = web3.eth.accounts[7]
+aggregator_admin_account = web3.eth.accounts[6]
+tso_admin_account = web3.eth.accounts[7]
 
 # Carica il file TSO.json
-with open('./build/contracts/TSO.json') as f:
+with open('./artifacts/contracts/TSO.sol/TSO.json') as f:
     tso_data = json.load(f)  # Carica una volta il file intero
 
 # Estrai l'ABI e l'indirizzo del contratto TSO
 tso_abi = tso_data['abi']
-tso_address = tso_data['networks']['5777']['address']  # Indirizzo del contratto TSO
+tso_address = os.getenv("TSO_CONTRACT_ADDRESS")  # Indirizzo del contratto TSO
+print(f"TSO address: {tso_address}")
 
 # Carica il file Aggregator.json
-with open('./build/contracts/Aggregator.json') as f:
+with open('./artifacts/contracts/Aggregator.sol/Aggregator.json') as f:
     aggregator_data = json.load(f)  # Carica una volta il file intero
 
 # Estrai l'ABI e l'indirizzo del contratto Aggregator
 aggregator_abi = aggregator_data['abi']
-aggregator_address = aggregator_data['networks']['5777']['address']  # Indirizzo del contratto Aggregator
+aggregator_address = os.getenv("AGGREGATOR_CONTRACT_ADDRESS")  # Indirizzo del contratto Aggregator
+print(f"Aggregator address: {aggregator_address}")
 
 # Inizializza il contratto
 tso_contract = web3.eth.contract(address=tso_address, abi=tso_abi)
@@ -69,7 +76,7 @@ def simulate_market_session():
 
     for slot in range(time_slots):
         # Step 1: Apri il mercato per lo slot corrente
-        tso_contract.functions.openMarket(required_energy_per_slot, True).transact({'from': admin_account})
+        tso_contract.functions.openMarket(required_energy_per_slot, True).transact({'from': tso_admin_account})
         print(f"Market opened for time slot {slot + 1}")
         
         # Step 2: Batterie che partecipano alla bid
@@ -85,18 +92,28 @@ def simulate_market_session():
                 bid_amount = 100  # Simuliamo una bid tra 80 e 150 kWh
                 bid_price = 90 + battery_index  # Prezzo della bid (varia tra le batterie)
 
+                nonce = web3.eth.get_transaction_count(aggregator_account)
                 tso_contract.functions.placeBid(
                     aggregator_account,  # Aggregatore
                     battery_owner,  # Proprietario della batteria
                     bid_amount,  # Volume in kWh
                     bid_price,  # Prezzo in EUR/MWh
                     battery_index - 1  # Indice della batteria
-                )
+                ).transact({
+                    'from': tso_admin_account,
+                    'nonce': nonce,
+                    'gas': 2000000,
+                    'gasPrice': web3.to_wei('20', 'Gwei')
+                })
+                
                 print(f"Aggregator {aggregator_account} placed a bid with {bid_amount} kWh at {bid_price} EUR/MWh")
+                print(f"Bid index is: {tso_contract.functions.getBidIndex(bid_count).call()}")
                 bid_count += 1
+                return True
+                
         
         # Step 3: Chiudi il mercato per lo slot corrente
-        tso_contract.functions.closeMarket().transact({'from': admin_account})
+        tso_contract.functions.closeMarket().transact({'from': tso_admin_account})
         print(f"Market closed for time slot {slot + 1}")
 
         # Step 4: Seleziona le bid fino a coprire l'energia richiesta
@@ -105,9 +122,10 @@ def simulate_market_session():
             
             print (f"Next bid index: {next_bid_index}, Bid count: {bid_count}")
             if next_bid_index < bid_count:
-                tso_contract.functions.selectNextBid(next_bid_index).transact({'from': admin_account})
+                tso_contract.functions.selectNextBid(next_bid_index).transact({'from': tso_admin_account})
                 print(f"Selected next bid for time slot {slot + 1}")
-                #tso_contract.functions.processNextPayment(next_bid_index).transact({'from': admin_account})
+                print(f"Selected battery owner's bid: {tso_contract.functions.getBatteryOwner(next_bid_index).call()} with bid index: {tso_contract.functions.getBidIndex(next_bid_index).call()}")
+                #tso_contract.functions.processNextPayment(next_bid_index).transact({'from': tso_admin_account})
             else:
                 print("No more bids to process.")
                 break
@@ -128,4 +146,4 @@ def simulate_market_session():
 # Registra le batterie
 register_batteries()
 # Simula la sessione di mercato
-simulate_market_session()
+#simulate_market_session()
