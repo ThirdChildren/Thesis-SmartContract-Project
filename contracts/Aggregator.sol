@@ -66,7 +66,13 @@ contract Aggregator {
         return batteries[_batteryOwner].SoC;
     }
 
-    function getAggregatorAdmin() public view returns (address) {
-        return aggregatorAdmin;
+    function getBatteryCapacity(
+        address _batteryOwner
+    ) public view returns (uint) {
+        require(
+            batteries[_batteryOwner].owner != address(0),
+            "Battery does not exist"
+        );
+        return batteries[_batteryOwner].capacity;
     }
 }

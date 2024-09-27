@@ -119,7 +119,11 @@ contract Market {
         Aggregator aggregator = Aggregator(aggregatorAddress);
         // Verify that the battery's SoC is greater than 50%
         uint batterySoC = aggregator.getBatterySoC(_batteryOwner);
-        require(batterySoC >= 50, "Battery SoC must be >= 50 to place a bid");
+        uint batteryCapacity = aggregator.getBatteryCapacity(_batteryOwner);
+        require(
+            _amount * 100 <= batterySoC * batteryCapacity,
+            "Amount placed exceeds battery capacity or SoC"
+        );
 
         bids[bidCount] = Bid(
             _bidder,

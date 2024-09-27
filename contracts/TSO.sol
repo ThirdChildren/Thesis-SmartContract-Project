@@ -100,9 +100,13 @@ contract TSO {
         Aggregator aggregator = Aggregator(aggregatorAddress);
 
         uint batterySoC = aggregator.getBatterySoC(_batteryOwner);
+        uint batteryCapacity = aggregator.getBatteryCapacity(_batteryOwner);
 
         if (isPositiveReserve) {
-            require(batterySoC >= 40, "Insufficient SoC to join the market");
+            require(
+                _amountInKWh * 100 <= batterySoC * batteryCapacity,
+                "Amount placed exceeds battery capacity or SoC"
+            );
         } else {
             require(batterySoC < 100, "Battery is full");
         }

@@ -90,7 +90,7 @@ describe("Day Ahead Market Contract", function () {
 
     // Register batteries for Aggregator 3
     await aggregatorContract3.registerBattery(owner5, 180, 90, true);
-    await aggregatorContract3.registerBattery(owner6, 100, 65, true);
+    await aggregatorContract3.registerBattery(owner6, 100, 95, true);
 
     const battery1 = await aggregatorContract1.batteries(owner1);
     const battery2 = await aggregatorContract1.batteries(owner2);
@@ -121,7 +121,7 @@ describe("Day Ahead Market Contract", function () {
 
     assert.equal(battery6.owner, owner6, "Battery 6 owner mismatch");
     assert.equal(battery6.capacity, 100, "Battery 6 capacity mismatch");
-    assert.equal(battery6.SoC, 65, "Battery 6 SoC mismatch");
+    assert.equal(battery6.SoC, 95, "Battery 6 SoC mismatch");
   });
 
   it("should set market times", async () => {
