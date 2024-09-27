@@ -35,11 +35,11 @@ describe("aFRR Market Contract", function () {
 
   it("should register batteries", async () => {
     // Register batteries for Aggregator 1
-    await aggregatorContract.registerBattery(owner1, 100, 80, true);
+    await aggregatorContract.registerBattery(owner1, 110, 84, true);
     await aggregatorContract.registerBattery(owner2, 150, 85, true);
     await aggregatorContract.registerBattery(owner3, 120, 83, true);
     await aggregatorContract.registerBattery(owner4, 130, 88, true);
-    await aggregatorContract.registerBattery(owner5, 180, 90, true);
+    await aggregatorContract.registerBattery(owner5, 142, 90, true);
 
     const battery1 = await aggregatorContract.batteries(owner1);
     const battery2 = await aggregatorContract.batteries(owner2);
@@ -48,8 +48,8 @@ describe("aFRR Market Contract", function () {
     const battery5 = await aggregatorContract.batteries(owner5);
 
     assert.equal(battery1.owner, owner1, "Battery 1 owner mismatch");
-    assert.equal(battery1.capacity, 100, "Battery 1 capacity mismatch");
-    assert.equal(battery1.SoC, 80, "Battery 1 SoC mismatch");
+    assert.equal(battery1.capacity, 110, "Battery 1 capacity mismatch");
+    assert.equal(battery1.SoC, 84, "Battery 1 SoC mismatch");
 
     assert.equal(battery2.owner, owner2, "Battery 2 owner mismatch");
     assert.equal(battery2.capacity, 150, "Battery 2 capacity mismatch");
@@ -64,7 +64,7 @@ describe("aFRR Market Contract", function () {
     assert.equal(battery4.SoC, 88, "Battery 4 SoC mismatch");
 
     assert.equal(battery5.owner, owner5, "Battery 5 owner mismatch");
-    assert.equal(battery5.capacity, 180, "Battery 5 capacity mismatch");
+    assert.equal(battery5.capacity, 142, "Battery 5 capacity mismatch");
     assert.equal(battery5.SoC, 90, "Battery 5 SoC mismatch");
   });
 
@@ -79,11 +79,11 @@ describe("aFRR Market Contract", function () {
   it("should place bids", async function () {
     //const aggregatorSigner = await ethers.getSigner(aggregatorAdmin);
     // Place bids for each battery
-    await tsoContract.placeBid(aggregatorAdmin, owner1, 90, 10); // 90 kWh, 10 EUR/MWh, bid_index 1
-    await tsoContract.placeBid(aggregatorAdmin, owner2, 130, 10);
-    await tsoContract.placeBid(aggregatorAdmin, owner3, 100, 12);
-    await tsoContract.placeBid(aggregatorAdmin, owner4, 110, 8);
-    await tsoContract.placeBid(aggregatorAdmin, owner5, 160, 11);
+    await tsoContract.placeBid(aggregatorAdmin, owner1, 90, 88); // 90 kWh, 88 EUR/MWh
+    await tsoContract.placeBid(aggregatorAdmin, owner2, 108, 69);
+    await tsoContract.placeBid(aggregatorAdmin, owner3, 80, 73);
+    await tsoContract.placeBid(aggregatorAdmin, owner4, 105, 62);
+    await tsoContract.placeBid(aggregatorAdmin, owner5, 115, 58);
 
     // Verifica che le bid siano state piazzate correttamente
     const bid1 = await tsoContract.bids(0);
@@ -95,27 +95,27 @@ describe("aFRR Market Contract", function () {
     assert.equal(bid1.bidder, aggregatorAdmin, "Bid 1 bidder mismatch");
     assert.equal(bid1.batteryOwner, owner1, "Bid 1 owner mismatch");
     assert.equal(bid1.amount, 90, "Bid 1 amount mismatch");
-    assert.equal(bid1.price, 10, "Bid 1 price mismatch");
+    assert.equal(bid1.price, 7, "Bid 1 price mismatch");
 
     assert.equal(bid2.bidder, aggregatorAdmin, "Bid 2 bidder mismatch");
     assert.equal(bid2.batteryOwner, owner2, "Bid 2 owner mismatch");
-    assert.equal(bid2.amount, 130, "Bid 2 amount mismatch");
-    assert.equal(bid2.price, 10, "Bid 2 price mismatch");
+    assert.equal(bid2.amount, 108, "Bid 2 amount mismatch");
+    assert.equal(bid2.price, 7, "Bid 2 price mismatch");
 
     assert.equal(bid3.bidder, aggregatorAdmin, "Bid 3 bidder mismatch");
     assert.equal(bid3.batteryOwner, owner3, "Bid 3 owner mismatch");
-    assert.equal(bid3.amount, 100, "Bid 3 amount mismatch");
-    assert.equal(bid3.price, 12, "Bid 3 price mismatch");
+    assert.equal(bid3.amount, 80, "Bid 3 amount mismatch");
+    assert.equal(bid3.price, 5, "Bid 3 price mismatch");
 
     assert.equal(bid4.bidder, aggregatorAdmin, "Bid 4 bidder mismatch");
     assert.equal(bid4.batteryOwner, owner4, "Bid 4 owner mismatch");
-    assert.equal(bid4.amount, 110, "Bid 4 amount mismatch");
-    assert.equal(bid4.price, 8, "Bid 4 price mismatch");
+    assert.equal(bid4.amount, 105, "Bid 4 amount mismatch");
+    assert.equal(bid4.price, 6, "Bid 4 price mismatch");
 
     assert.equal(bid5.bidder, aggregatorAdmin, "Bid 5 bidder mismatch");
     assert.equal(bid5.batteryOwner, owner5, "Bid 5 owner mismatch");
-    assert.equal(bid5.amount, 160, "Bid 5 amount mismatch");
-    assert.equal(bid5.price, 11, "Bid 5 price mismatch");
+    assert.equal(bid5.amount, 115, "Bid 5 amount mismatch");
+    assert.equal(bid5.price, 6, "Bid 5 price mismatch");
   });
 
   it("should close the market", async function () {
@@ -162,21 +162,11 @@ describe("aFRR Market Contract", function () {
     const price4 = bid4.amount * bid4.price;
 
     // Acquista energia e aggiorna il SoC
-    await tsoContract
-      .connect(tsoSigner)
-      .processPayment(0, { value: price0, gasLimit: 1000000 });
-    await tsoContract
-      .connect(tsoSigner)
-      .processPayment(1, { value: price1, gasLimit: 1000000 });
-    await tsoContract
-      .connect(tsoSigner)
-      .processPayment(2, { value: price2, gasLimit: 1000000 });
-    await tsoContract
-      .connect(tsoSigner)
-      .processPayment(3, { value: price3, gasLimit: 1000000 });
-    await tsoContract
-      .connect(tsoSigner)
-      .processPayment(4, { value: price4, gasLimit: 1000000 });
+    await tsoContract.connect(tsoSigner).processPayment(0, { value: price0 });
+    await tsoContract.connect(tsoSigner).processPayment(1, { value: price1 });
+    await tsoContract.connect(tsoSigner).processPayment(2, { value: price2 });
+    await tsoContract.connect(tsoSigner).processPayment(3, { value: price3 });
+    await tsoContract.connect(tsoSigner).processPayment(4, { value: price4 });
 
     // Check updated SoC
     battery1 = await aggregatorContract.batteries(owner1);
@@ -187,27 +177,27 @@ describe("aFRR Market Contract", function () {
 
     assert.equal(
       battery1.SoC.toNumber(),
-      70,
+      3,
       "Battery 1 SoC not updated correctly"
     );
     assert.equal(
       battery2.SoC.toNumber(),
-      35,
+      13,
       "Battery 2 SoC not updated correctly"
     );
     assert.equal(
       battery3.SoC.toNumber(),
-      31,
+      17,
       "Battery 3 SoC not updated correctly"
     );
     assert.equal(
       battery4.SoC.toNumber(),
-      38,
+      8,
       "Battery 4 SoC not updated correctly"
     );
     assert.equal(
       battery5.SoC.toNumber(),
-      40,
+      10,
       "Battery 5 SoC not updated correctly"
     );
   });

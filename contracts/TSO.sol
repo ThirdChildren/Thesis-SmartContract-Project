@@ -111,22 +111,22 @@ contract TSO {
         require(_pricePerMWh > 0, "Price must be greater than 0");
 
         // Calculating the price per kWh
-        //uint _pricePerKWh = (_pricePerMWh * _amountInKWh) / 1000;
+        uint _pricePerKWh = (_pricePerMWh * _amountInKWh) / 1000;
 
         bids[bidCount] = Bid(
             _bidder,
             _batteryOwner,
             _amountInKWh,
-            _pricePerMWh,
+            _pricePerKWh,
             false
         );
 
         console.log("Bid placed by: ", _bidder);
         console.log("Battery owner: ", _batteryOwner);
         console.log("Bid amount: ", _amountInKWh, " kWh");
-        console.log("Bid price: ", _pricePerMWh, " EUR/MWh");
+        console.log("Bid price: ", _pricePerKWh, " EUR/KWh");
 
-        emit BidPlaced(_bidder, _batteryOwner, _amountInKWh, _pricePerMWh);
+        emit BidPlaced(_bidder, _batteryOwner, _amountInKWh, _pricePerKWh);
         bidCount++;
     }
 
@@ -156,21 +156,32 @@ contract TSO {
     }
 
     function processPayment(uint _bidId) public payable {
+        console.log("Processing payment for bid ID:", _bidId);
+        console.log("Market status:", marketOpen);
+        console.log("Bid selected:", bids[_bidId].isSelected);
+
         require(bids[_bidId].isSelected, "Bid not accepted");
-        require(
-            msg.value == bids[_bidId].amount * bids[_bidId].price,
-            "Insufficient funds"
-        );
+
+        uint paymentRequired = bids[_bidId].amount * bids[_bidId].price;
+        console.log("Payment sent:", msg.value);
+        console.log("Payment required:", paymentRequired);
+
+        require(msg.value == paymentRequired, "Insufficient funds");
+
         address owner = bids[_bidId].bidder;
         address batteryOwner = bids[_bidId].batteryOwner;
+        console.log("Bidder address:", owner);
+        console.log("Battery owner address:", batteryOwner);
 
-        address aggregatorAddress = aggregators[bids[_bidId].batteryOwner];
+        address aggregatorAddress = aggregators[batteryOwner];
         Aggregator aggregator = Aggregator(aggregatorAddress);
+        console.log("Aggregator address:", aggregatorAddress);
 
         require(!marketOpen, "Market is still open");
-        //require(nextPaymentIndex < bidCount, "All payments processed");
 
         uint commission = (msg.value * aggregator.commissionRate()) / 100;
+        console.log("Commission:", commission);
+        console.log("Payment to battery owner:", msg.value - commission);
 
         // Pay battery owner
         payable(batteryOwner).transfer(msg.value - commission);
@@ -180,15 +191,18 @@ contract TSO {
         );
 
         // Pay aggregator
-        payable(address(aggregator)).transfer(commission);
+        console.log("Payment to aggregator:", commission);
+        payable(owner).transfer(commission);
         emit PaymentToAggregatorOwnerRecorded(owner, commission);
 
         // Update battery SoC
+        console.log("Updating Battery SoC for battery owner:", batteryOwner);
         aggregator.updateBatterySoCAfterSale(
-            batteryOwner,
+            bids[_bidId].batteryOwner,
             bids[_bidId].amount,
             isPositiveReserve
         );
+        console.log("Payment processing completed.");
     }
 
     function getBatteryOwner(uint _index) public view returns (address) {
