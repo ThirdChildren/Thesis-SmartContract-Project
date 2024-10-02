@@ -1,39 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
+import "hardhat/console.sol";
+
+struct Battery {
+    address owner;
+    uint capacity; // in kWh
+    uint SoC; // State of Charge in percentage
+    bool isRegistered;
+}
 
 contract Aggregator {
-    struct Battery {
-        address owner;
-        uint capacity; // in kWh
-        uint SoC; // State of Charge in percentage
-        bool isRegistered;
-    }
-
     mapping(address => Battery) public batteries;
     address[] public batteryAddresses;
-    address public aggregatorAdmin;
     uint public commissionRate; // Commission rate in percentage, e.g., 5 for 5%
 
-    modifier batteryIsNotRegistered() {
-        require(
-            !batteries[msg.sender].isRegistered,
-            "Battery already registered"
-        );
-        _;
-    }
-    constructor(address _aggregatorAdmin, uint _commissionRate) {
-        aggregatorAdmin = _aggregatorAdmin;
+    constructor(uint _commissionRate) {
         commissionRate = _commissionRate;
     }
 
     function registerBattery(
         address _owner,
         uint _capacity,
-        uint _SoC,
-        bool isRegistered
-    ) external batteryIsNotRegistered {
-        batteries[_owner] = Battery(_owner, _capacity, _SoC, isRegistered);
+        uint _SoC
+    ) external {
+        require(!batteries[_owner].isRegistered, "Battery already registered");
+        batteries[_owner] = Battery(_owner, _capacity, _SoC, true);
         batteryAddresses.push(_owner);
+        console.log(
+            "Battery owner:",
+            batteries[_owner].owner,
+            "registered",
+            batteries[_owner].isRegistered
+        );
     }
 
     function updateBatterySoCAfterSale(
@@ -57,7 +55,6 @@ contract Aggregator {
         }
     }
 
-    // Funzione per ottenere il SoC di una batteria
     function getBatterySoC(address _batteryOwner) public view returns (uint) {
         require(
             batteries[_batteryOwner].owner != address(0),

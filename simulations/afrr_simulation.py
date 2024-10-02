@@ -136,6 +136,6 @@ def simulate_market_session():
     print("Market simulation complete.")
 
 # Registra le batterie
-#register_batteries()
+register_batteries()
 # Simula la sessione di mercato
-simulate_market_session()
+#simulate_market_session()

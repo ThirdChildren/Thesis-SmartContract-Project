@@ -18,7 +18,7 @@ describe("aFRR Market Contract", function () {
     const Aggregator = await ethers.getContractFactory("Aggregator");
     const TSO = await ethers.getContractFactory("TSO");
 
-    aggregatorContract = await Aggregator.deploy(aggregatorAdmin, 10);
+    aggregatorContract = await Aggregator.deploy(10);
     await aggregatorContract.deployed();
     console.log("Aggregator deployed at: ", aggregatorContract.address);
 
@@ -35,11 +35,12 @@ describe("aFRR Market Contract", function () {
 
   it("should register batteries", async () => {
     // Register batteries for Aggregator 1
-    await aggregatorContract.registerBattery(owner1, 110, 84, true);
-    await aggregatorContract.registerBattery(owner2, 150, 85, true);
-    await aggregatorContract.registerBattery(owner3, 120, 83, true);
-    await aggregatorContract.registerBattery(owner4, 130, 88, true);
-    await aggregatorContract.registerBattery(owner5, 142, 90, true);
+    await aggregatorContract.registerBattery(owner1, 110, 84);
+    await aggregatorContract.registerBattery(owner2, 150, 85);
+    await aggregatorContract.registerBattery(owner3, 120, 83);
+    await aggregatorContract.registerBattery(owner4, 130, 88);
+    await aggregatorContract.registerBattery(owner5, 142, 90);
+    //await aggregatorContract.registerBattery(owner1, 105, 89);
 
     const battery1 = await aggregatorContract.batteries(owner1);
     const battery2 = await aggregatorContract.batteries(owner2);
@@ -126,54 +127,59 @@ describe("aFRR Market Contract", function () {
     assert.equal(marketOpen, false, "Market not closed");
   });
 
-  it("should select bids and process payments", async function () {
+  it("should select bids, process payments, and update the SoC", async function () {
     const tsoSigner = await ethers.getSigner(tsoAdmin);
-    // Seleziona le bid
-    await tsoContract.connect(tsoSigner).acceptBid(0, { gasLimit: 1000000 });
-    await tsoContract.connect(tsoSigner).acceptBid(1, { gasLimit: 1000000 });
-    await tsoContract.connect(tsoSigner).acceptBid(2, { gasLimit: 1000000 });
-    await tsoContract.connect(tsoSigner).acceptBid(3, { gasLimit: 1000000 });
-    await tsoContract.connect(tsoSigner).acceptBid(4, { gasLimit: 1000000 });
 
+    // Recupera le bid esistenti
     const bid0 = await tsoContract.bids(0);
     const bid1 = await tsoContract.bids(1);
     const bid2 = await tsoContract.bids(2);
     const bid3 = await tsoContract.bids(3);
     const bid4 = await tsoContract.bids(4);
 
-    assert.equal(bid0.isSelected, true, "Bid 0 not accepted");
-    assert.equal(bid1.isSelected, true, "Bid 1 not accepted");
-    assert.equal(bid2.isSelected, true, "Bid 2 not accepted");
-    assert.equal(bid3.isSelected, true, "Bid 3 not accepted");
-    assert.equal(bid4.isSelected, true, "Bid 4 not accepted");
-  });
-
-  it("should purchase energy and update the SoC", async () => {
-    const tsoSigner = await ethers.getSigner(tsoAdmin);
-    const bid0 = await tsoContract.bids(0);
-    const bid1 = await tsoContract.bids(1);
-    const bid2 = await tsoContract.bids(2);
-    const bid3 = await tsoContract.bids(3);
-    const bid4 = await tsoContract.bids(4);
+    // Calcola l'importo necessario per ogni pagamento
     const price0 = bid0.amount * bid0.price;
     const price1 = bid1.amount * bid1.price;
     const price2 = bid2.amount * bid2.price;
     const price3 = bid3.amount * bid3.price;
     const price4 = bid4.amount * bid4.price;
 
-    // Acquista energia e aggiorna il SoC
-    await tsoContract.connect(tsoSigner).processPayment(0, { value: price0 });
-    await tsoContract.connect(tsoSigner).processPayment(1, { value: price1 });
-    await tsoContract.connect(tsoSigner).processPayment(2, { value: price2 });
-    await tsoContract.connect(tsoSigner).processPayment(3, { value: price3 });
-    await tsoContract.connect(tsoSigner).processPayment(4, { value: price4 });
+    // Seleziona le bid e processa il pagamento
+    await tsoContract
+      .connect(tsoSigner)
+      .acceptBid(0, { value: price0, gasLimit: 1000000 });
+    await tsoContract
+      .connect(tsoSigner)
+      .acceptBid(1, { value: price1, gasLimit: 1000000 });
+    await tsoContract
+      .connect(tsoSigner)
+      .acceptBid(2, { value: price2, gasLimit: 1000000 });
+    await tsoContract
+      .connect(tsoSigner)
+      .acceptBid(3, { value: price3, gasLimit: 1000000 });
+    await tsoContract
+      .connect(tsoSigner)
+      .acceptBid(4, { value: price4, gasLimit: 1000000 });
 
-    // Check updated SoC
-    battery1 = await aggregatorContract.batteries(owner1);
-    battery2 = await aggregatorContract.batteries(owner2);
-    battery3 = await aggregatorContract.batteries(owner3);
-    battery4 = await aggregatorContract.batteries(owner4);
-    battery5 = await aggregatorContract.batteries(owner5);
+    // Verifica che le bid siano state selezionate
+    const updatedBid0 = await tsoContract.bids(0);
+    const updatedBid1 = await tsoContract.bids(1);
+    const updatedBid2 = await tsoContract.bids(2);
+    const updatedBid3 = await tsoContract.bids(3);
+    const updatedBid4 = await tsoContract.bids(4);
+
+    assert.equal(updatedBid0.isSelected, true, "Bid 0 not accepted");
+    assert.equal(updatedBid1.isSelected, true, "Bid 1 not accepted");
+    assert.equal(updatedBid2.isSelected, true, "Bid 2 not accepted");
+    assert.equal(updatedBid3.isSelected, true, "Bid 3 not accepted");
+    assert.equal(updatedBid4.isSelected, true, "Bid 4 not accepted");
+
+    // Controlla se il SoC delle batterie è stato aggiornato
+    const battery1 = await aggregatorContract.batteries(owner1);
+    const battery2 = await aggregatorContract.batteries(owner2);
+    const battery3 = await aggregatorContract.batteries(owner3);
+    const battery4 = await aggregatorContract.batteries(owner4);
+    const battery5 = await aggregatorContract.batteries(owner5);
 
     assert.equal(
       battery1.SoC.toNumber(),

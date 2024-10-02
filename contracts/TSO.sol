@@ -140,20 +140,21 @@ contract TSO {
         emit MarketClosed();
     }
 
-    function acceptBid(uint _bidId) external onlyTsoAdmin {
+    function acceptBid(uint _bidId) external payable onlyTsoAdmin {
         require(!marketOpen, "Market is still open");
-        //require(nextBidIndex < bidCount, "All bids processed");
 
-        uint energySelected = totalSelectedEnergy; // Track total selected energy
+        uint energySelected = totalSelectedEnergy;
         if (energySelected < requiredEnergy) {
             bids[_bidId].isSelected = true;
             energySelected += bids[_bidId].amount;
-            totalSelectedEnergy = energySelected; // Update the total selected energy
+            totalSelectedEnergy = energySelected;
             emit BidSelected(
                 bids[_bidId].batteryOwner,
                 bids[_bidId].amount,
                 bids[_bidId].price
             );
+
+            this.processPayment{value: msg.value}(_bidId);
         } else {
             console.log("Energy selected is greater than required energy");
         }

@@ -42,24 +42,15 @@ describe("Day Ahead Market Contract", function () {
       const Aggregator = await ethers.getContractFactory("Aggregator");
       const Market = await ethers.getContractFactory("Market");
 
-      aggregatorContract1 = await Aggregator.deploy(
-        "0x9cfD36771A496f4BC904b94b778fC772759B605d",
-        10
-      );
+      aggregatorContract1 = await Aggregator.deploy(10);
       await aggregatorContract1.deployed();
       console.log("Aggregator1 deployed at: ", aggregatorContract1.address);
 
-      aggregatorContract2 = await Aggregator.deploy(
-        "0x9cfD36771A496f4BC904b94b778fC772759B605d",
-        10
-      );
+      aggregatorContract2 = await Aggregator.deploy(10);
       await aggregatorContract2.deployed();
       console.log("Aggregator2 deployed at: ", aggregatorContract2.address);
 
-      aggregatorContract3 = await Aggregator.deploy(
-        "0x9cfD36771A496f4BC904b94b778fC772759B605d",
-        10
-      );
+      aggregatorContract3 = await Aggregator.deploy(10);
       await aggregatorContract3.deployed();
       console.log("Aggregator3 deployed at: ", aggregatorContract3.address);
 

@@ -7,10 +7,7 @@ async function main() {
 
   // 1. Deploy Aggregator contract
   const Aggregator = await ethers.getContractFactory("Aggregator");
-  const aggregator = await Aggregator.deploy(
-    "0x9cfD36771A496f4BC904b94b778fC772759B605d",
-    10
-  ); // Se ci sono argomenti per il costruttore, passarli qui
+  const aggregator = await Aggregator.deploy(10); // Se ci sono argomenti per il costruttore, passarli qui
   await aggregator.deployed();
   console.log("Aggregator contract deployed to:", aggregator.address);
 
