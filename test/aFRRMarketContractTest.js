@@ -22,24 +22,24 @@ describe("aFRR Market Contract", function () {
     await aggregatorContract.deployed();
     console.log("Aggregator deployed at: ", aggregatorContract.address);
 
-    tsoContract = await TSO.deploy(tsoAdmin);
+    tsoContract = await TSO.deploy(aggregatorContract.address);
     await tsoContract.deployed();
     console.log("TSO deployed at: ", tsoContract.address);
-
-    await tsoContract.setAggregator(owner1, aggregatorContract.address);
-    await tsoContract.setAggregator(owner2, aggregatorContract.address);
-    await tsoContract.setAggregator(owner3, aggregatorContract.address);
-    await tsoContract.setAggregator(owner4, aggregatorContract.address);
-    await tsoContract.setAggregator(owner5, aggregatorContract.address);
   });
 
   it("should register batteries", async () => {
+    const owner1Signer = await ethers.getSigner(owner1);
+    const owner2Signer = await ethers.getSigner(owner2);
+    const owner3Signer = await ethers.getSigner(owner3);
+    const owner4Signer = await ethers.getSigner(owner4);
+    const owner5Signer = await ethers.getSigner(owner5);
     // Register batteries for Aggregator 1
-    await aggregatorContract.registerBattery(owner1, 110, 84);
-    await aggregatorContract.registerBattery(owner2, 150, 85);
-    await aggregatorContract.registerBattery(owner3, 120, 83);
-    await aggregatorContract.registerBattery(owner4, 130, 88);
-    await aggregatorContract.registerBattery(owner5, 142, 90);
+    await aggregatorContract.connect(owner1Signer).registerBattery(110, 84);
+    await aggregatorContract.connect(owner2Signer).registerBattery(150, 85);
+    await aggregatorContract.connect(owner3Signer).registerBattery(120, 83);
+    await aggregatorContract.connect(owner4Signer).registerBattery(130, 88);
+    await aggregatorContract.connect(owner5Signer).registerBattery(142, 90);
+
     //await aggregatorContract.registerBattery(owner1, 105, 89);
 
     const battery1 = await aggregatorContract.batteries(owner1);
@@ -48,43 +48,48 @@ describe("aFRR Market Contract", function () {
     const battery4 = await aggregatorContract.batteries(owner4);
     const battery5 = await aggregatorContract.batteries(owner5);
 
-    assert.equal(battery1.owner, owner1, "Battery 1 owner mismatch");
     assert.equal(battery1.capacity, 110, "Battery 1 capacity mismatch");
     assert.equal(battery1.SoC, 84, "Battery 1 SoC mismatch");
 
-    assert.equal(battery2.owner, owner2, "Battery 2 owner mismatch");
     assert.equal(battery2.capacity, 150, "Battery 2 capacity mismatch");
     assert.equal(battery2.SoC, 85, "Battery 2 SoC mismatch");
 
-    assert.equal(battery3.owner, owner3, "Battery 3 owner mismatch");
     assert.equal(battery3.capacity, 120, "Battery 3 capacity mismatch");
     assert.equal(battery3.SoC, 83, "Battery 3 SoC mismatch");
 
-    assert.equal(battery4.owner, owner4, "Battery 4 owner mismatch");
     assert.equal(battery4.capacity, 130, "Battery 4 capacity mismatch");
     assert.equal(battery4.SoC, 88, "Battery 4 SoC mismatch");
 
-    assert.equal(battery5.owner, owner5, "Battery 5 owner mismatch");
     assert.equal(battery5.capacity, 142, "Battery 5 capacity mismatch");
     assert.equal(battery5.SoC, 90, "Battery 5 SoC mismatch");
   });
 
   it("should open the market for positive reserve", async function () {
     // Apri il mercato con 500 kWh di energia richiesta per la riserva positiva
-    const tsoSigner = await ethers.getSigner(tsoAdmin);
-    await tsoContract.connect(tsoSigner).openMarket(500, true);
+    //const tsoSigner = await ethers.getSigner(tsoAdmin);
+    await tsoContract.openMarket(500, true);
     const marketOpen = await tsoContract.marketOpen();
     assert.equal(marketOpen, true, "Market not open");
   });
 
   it("should place bids", async function () {
-    //const aggregatorSigner = await ethers.getSigner(aggregatorAdmin);
+    const aggregatorSigner = await ethers.getSigner(aggregatorAdmin);
     // Place bids for each battery
-    await tsoContract.placeBid(aggregatorAdmin, owner1, 90, 88); // 90 kWh, 88 EUR/MWh
-    await tsoContract.placeBid(aggregatorAdmin, owner2, 108, 69);
-    await tsoContract.placeBid(aggregatorAdmin, owner3, 80, 73);
-    await tsoContract.placeBid(aggregatorAdmin, owner4, 105, 62);
-    await tsoContract.placeBid(aggregatorAdmin, owner5, 115, 58);
+    await tsoContract
+      .connect(aggregatorSigner)
+      .placeBid(owner1, 90, 88, { gasLimit: 1000000 }); // 90 kWh, 88 EUR/MWh
+    await tsoContract
+      .connect(aggregatorSigner)
+      .placeBid(owner2, 108, 69, { gasLimit: 1000000 }); // 108 kWh, 69 EUR/MWh
+    await tsoContract
+      .connect(aggregatorSigner)
+      .placeBid(owner3, 80, 73, { gasLimit: 1000000 }); // 80 kWh, 73 EUR/MWh
+    await tsoContract
+      .connect(aggregatorSigner)
+      .placeBid(owner4, 105, 62, { gasLimit: 1000000 }); // 105 kWh, 62 EUR/MWh
+    await tsoContract
+      .connect(aggregatorSigner)
+      .placeBid(owner5, 115, 58, { gasLimit: 1000000 }); // 115 kWh, 58 EUR/MWh
 
     // Verifica che le bid siano state piazzate correttamente
     const bid1 = await tsoContract.bids(0);
@@ -93,36 +98,29 @@ describe("aFRR Market Contract", function () {
     const bid4 = await tsoContract.bids(3);
     const bid5 = await tsoContract.bids(4);
 
-    assert.equal(bid1.bidder, aggregatorAdmin, "Bid 1 bidder mismatch");
     assert.equal(bid1.batteryOwner, owner1, "Bid 1 owner mismatch");
     assert.equal(bid1.amount, 90, "Bid 1 amount mismatch");
     assert.equal(bid1.price, 7, "Bid 1 price mismatch");
 
-    assert.equal(bid2.bidder, aggregatorAdmin, "Bid 2 bidder mismatch");
     assert.equal(bid2.batteryOwner, owner2, "Bid 2 owner mismatch");
     assert.equal(bid2.amount, 108, "Bid 2 amount mismatch");
     assert.equal(bid2.price, 7, "Bid 2 price mismatch");
 
-    assert.equal(bid3.bidder, aggregatorAdmin, "Bid 3 bidder mismatch");
     assert.equal(bid3.batteryOwner, owner3, "Bid 3 owner mismatch");
     assert.equal(bid3.amount, 80, "Bid 3 amount mismatch");
     assert.equal(bid3.price, 5, "Bid 3 price mismatch");
 
-    assert.equal(bid4.bidder, aggregatorAdmin, "Bid 4 bidder mismatch");
     assert.equal(bid4.batteryOwner, owner4, "Bid 4 owner mismatch");
     assert.equal(bid4.amount, 105, "Bid 4 amount mismatch");
     assert.equal(bid4.price, 6, "Bid 4 price mismatch");
 
-    assert.equal(bid5.bidder, aggregatorAdmin, "Bid 5 bidder mismatch");
     assert.equal(bid5.batteryOwner, owner5, "Bid 5 owner mismatch");
     assert.equal(bid5.amount, 115, "Bid 5 amount mismatch");
     assert.equal(bid5.price, 6, "Bid 5 price mismatch");
   });
 
   it("should close the market", async function () {
-    const tsoSigner = await ethers.getSigner(tsoAdmin);
-    // Chiudi il mercato
-    await tsoContract.connect(tsoSigner).closeMarket();
+    await tsoContract.closeMarket();
     const marketOpen = await tsoContract.marketOpen();
     assert.equal(marketOpen, false, "Market not closed");
   });
@@ -206,9 +204,5 @@ describe("aFRR Market Contract", function () {
       10,
       "Battery 5 SoC not updated correctly"
     );
-  });
-
-  it("should prevent placing bids when market is closed", async function () {
-    // Prova a piazzare una bid con il mercato chiuso (dovrebbe fallire)
   });
 });

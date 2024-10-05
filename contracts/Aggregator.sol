@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 import "hardhat/console.sol";
 
 struct Battery {
-    address owner;
     uint capacity; // in kWh
     uint SoC; // State of Charge in percentage
     bool isRegistered;
@@ -11,27 +10,29 @@ struct Battery {
 
 contract Aggregator {
     mapping(address => Battery) public batteries;
-    address[] public batteryAddresses;
+    address public owner;
     uint public commissionRate; // Commission rate in percentage, e.g., 5 for 5%
 
     constructor(uint _commissionRate) {
+        owner = msg.sender;
         commissionRate = _commissionRate;
     }
 
-    function registerBattery(
-        address _owner,
-        uint _capacity,
-        uint _SoC
-    ) external {
-        require(!batteries[_owner].isRegistered, "Battery already registered");
-        batteries[_owner] = Battery(_owner, _capacity, _SoC, true);
-        batteryAddresses.push(_owner);
+    event BatteryRegistered(address indexed owner, uint capacity, uint SoC);
+
+    function registerBattery(uint _capacity, uint _SoC) external {
+        require(
+            batteries[msg.sender].isRegistered == false,
+            "Battery already registered"
+        );
+        batteries[msg.sender] = Battery(_capacity, _SoC, true);
         console.log(
             "Battery owner:",
-            batteries[_owner].owner,
+            msg.sender,
             "registered",
-            batteries[_owner].isRegistered
+            batteries[msg.sender].isRegistered
         );
+        emit BatteryRegistered(msg.sender, _capacity, _SoC);
     }
 
     function updateBatterySoCAfterSale(
@@ -40,7 +41,7 @@ contract Aggregator {
         bool _isPositiveReserve
     ) external {
         Battery storage battery = batteries[_owner];
-        require(battery.owner == _owner, "Battery not found");
+        //require(battery.owner == _owner, "Battery not found");
         if (_isPositiveReserve) {
             uint newSoc = uint(
                 battery.SoC - ((_amountSold * 100) / battery.capacity)
@@ -56,20 +57,12 @@ contract Aggregator {
     }
 
     function getBatterySoC(address _batteryOwner) public view returns (uint) {
-        require(
-            batteries[_batteryOwner].owner != address(0),
-            "Battery does not exist"
-        );
         return batteries[_batteryOwner].SoC;
     }
 
     function getBatteryCapacity(
         address _batteryOwner
     ) public view returns (uint) {
-        require(
-            batteries[_batteryOwner].owner != address(0),
-            "Battery does not exist"
-        );
         return batteries[_batteryOwner].capacity;
     }
 }
