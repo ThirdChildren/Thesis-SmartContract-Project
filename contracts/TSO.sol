@@ -106,27 +106,27 @@ contract TSO {
 
     function acceptBid(uint _bidId) external payable {
         require(!marketOpen, "Market is still open");
-
         uint energySelected = totalSelectedEnergy;
-        if (energySelected < requiredEnergy) {
-            bids[_bidId].isSelected = true;
-            energySelected += bids[_bidId].amount;
-            totalSelectedEnergy = energySelected;
-            emit BidSelected(
-                bids[_bidId].batteryOwner,
-                bids[_bidId].amount,
-                bids[_bidId].price
-            );
+        require(
+            energySelected < requiredEnergy,
+            "Required energy already selected"
+        );
 
-            this.processPayment{value: msg.value}(_bidId);
-        } else {
-            console.log("Energy selected exceeds required energy");
-        }
+        bids[_bidId].isSelected = true;
+        energySelected += bids[_bidId].amount;
+        totalSelectedEnergy = energySelected;
+        emit BidSelected(
+            bids[_bidId].batteryOwner,
+            bids[_bidId].amount,
+            bids[_bidId].price
+        );
+
+        this.processPayment{value: msg.value}(_bidId);
     }
 
     function processPayment(uint _bidId) public payable {
         require(bids[_bidId].isSelected, "Bid not accepted");
-        require(msg.value == bids[_bidId].price, "Insufficient funds");
+        //require(msg.value == bids[_bidId].price, "Insufficient funds");
 
         uint commission = (msg.value * aggregator.commissionRate()) / 100;
         uint batteryOwnerPayment = msg.value - commission;
