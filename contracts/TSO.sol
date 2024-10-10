@@ -49,14 +49,15 @@ contract TSO {
     }
 
     constructor(address _aggregatorAddress) {
-        tsoAdmin = msg.sender; // TSO Admin is the contract deployer
+        tsoAdmin = msg.sender;
         aggregator = Aggregator(_aggregatorAddress); // Initialize the aggregator contract
     }
 
     function openMarket(
         uint _requiredEnergy,
         bool _isPositiveReserve
-    ) external onlyTsoAdmin {
+    ) external {
+        require(marketOpen == false, "Market is already open");
         requiredEnergy = _requiredEnergy;
         isPositiveReserve = _isPositiveReserve;
         marketOpen = true;
@@ -89,15 +90,15 @@ contract TSO {
         require(_pricePerMWh > 0, "Price must be greater than 0");
 
         // Convert price per MWh to price per kWh
-        uint _pricePerKWh = (_pricePerMWh * _amountInKWh) / 1000;
+        uint _totalPrice = (_pricePerMWh * _amountInKWh) / 1000;
 
-        bids[bidCount] = Bid(_batteryOwner, _amountInKWh, _pricePerKWh, false);
+        bids[bidCount] = Bid(_batteryOwner, _amountInKWh, _totalPrice, false);
 
-        emit BidPlaced(_batteryOwner, _amountInKWh, _pricePerKWh);
+        emit BidPlaced(_batteryOwner, _amountInKWh, _totalPrice);
         bidCount++;
     }
 
-    function closeMarket() external onlyTsoAdmin {
+    function closeMarket() external {
         require(marketOpen, "Market is already closed");
         marketOpen = false;
         emit MarketClosed();
@@ -125,8 +126,7 @@ contract TSO {
 
     function processPayment(uint _bidId) public payable {
         require(bids[_bidId].isSelected, "Bid not accepted");
-        uint paymentRequired = bids[_bidId].amount * bids[_bidId].price;
-        require(msg.value == paymentRequired, "Insufficient funds");
+        require(msg.value == bids[_bidId].price, "Insufficient funds");
 
         uint commission = (msg.value * aggregator.commissionRate()) / 100;
         uint batteryOwnerPayment = msg.value - commission;
