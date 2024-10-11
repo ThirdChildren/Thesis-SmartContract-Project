@@ -56,7 +56,7 @@ contract Aggregator {
         }
     }
 
-    function getBatterySoC(address _batteryOwner) public view returns (uint) {
+    function getBatterySoC(address _batteryOwner) external view returns (uint) {
         return batteries[_batteryOwner].SoC;
     }
 
