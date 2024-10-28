@@ -1,3 +1,5 @@
+const fs = require("fs");
+
 async function main() {
   // Recupera i signatori (account) che effettueranno il deploy dei contratti
   /*  const signers = await ethers.getSigners(); // Ottieni tutti gli account
@@ -27,6 +29,23 @@ async function main() {
   );
   await market.deployed();
   console.log("Market contract deployed to:", market.address);
+
+  // Aggiorna il file .env
+  const envFilePath = "../dapp/.env";
+  let envContent = fs.readFileSync(envFilePath, "utf-8");
+
+  // Aggiorna gli indirizzi nel file .env
+  envContent = envContent.replace(
+    /AGGREGATOR_CONTRACT_ADDRESS=.*/,
+    `AGGREGATOR_CONTRACT_ADDRESS=${aggregator.address}`
+  );
+  envContent = envContent.replace(
+    /TSO_CONTRACT_ADDRESS=.*/,
+    `TSO_CONTRACT_ADDRESS=${tso.address}`
+  );
+
+  // Scrivi il nuovo contenuto nel file .env
+  fs.writeFileSync(envFilePath, envContent, "utf-8");
 }
 
 main()
