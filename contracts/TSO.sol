@@ -61,6 +61,7 @@ contract TSO {
         requiredEnergy = _requiredEnergy;
         isPositiveReserve = _isPositiveReserve;
         marketOpen = true;
+        totalSelectedEnergy = 0;
         emit MarketOpened(requiredEnergy, isPositiveReserve);
     }
 
@@ -96,6 +97,7 @@ contract TSO {
 
         emit BidPlaced(_batteryOwner, _amountInKWh, _totalPrice);
         bidCount++;
+        //console.log("Bid count: ", bidCount);
     }
 
     function closeMarket() external {

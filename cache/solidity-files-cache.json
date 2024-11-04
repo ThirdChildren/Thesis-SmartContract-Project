@@ -39,8 +39,8 @@
       ]
     },
     "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/TSO.sol": {
-      "lastModificationDate": 1728652664958,
-      "contentHash": "5f460c1c38087dcb50c09ed2defede14",
+      "lastModificationDate": 1730712740958,
+      "contentHash": "fdfc4c33212d028d227c1775adb6d0cf",
       "sourceName": "contracts/TSO.sol",
       "solcConfig": {
         "version": "0.8.9",
