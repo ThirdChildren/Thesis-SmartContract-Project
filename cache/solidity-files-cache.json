@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/Aggregator.sol": {
-      "lastModificationDate": 1728630366528,
-      "contentHash": "e2acd03771bbdeea4ce3f89ec949a925",
+      "lastModificationDate": 1730914605202,
+      "contentHash": "964bedbb3df4a6270beb0eb94c01b266",
       "sourceName": "contracts/Aggregator.sol",
       "solcConfig": {
         "version": "0.8.9",
@@ -39,8 +39,8 @@
       ]
     },
     "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/TSO.sol": {
-      "lastModificationDate": 1730712740958,
-      "contentHash": "fdfc4c33212d028d227c1775adb6d0cf",
+      "lastModificationDate": 1730914776212,
+      "contentHash": "255277f3ed55e71aab1eced5e70e19e2",
       "sourceName": "contracts/TSO.sol",
       "solcConfig": {
         "version": "0.8.9",

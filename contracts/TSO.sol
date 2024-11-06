@@ -123,6 +123,13 @@ contract TSO {
             bids[_bidId].price
         );
 
+        // Update the battery SoC
+        aggregator.updateBatterySoCAfterSale(
+            bids[_bidId].batteryOwner,
+            bids[_bidId].amount,
+            isPositiveReserve
+        );
+
         this.processPayment{value: msg.value}(_bidId);
     }
 
@@ -143,12 +150,5 @@ contract TSO {
         // Pay the aggregator (owner of the aggregator contract)
         payable(aggregator.owner()).transfer(commission);
         emit PaymentToAggregatorOwnerRecorded(aggregator.owner(), commission);
-
-        // Update the battery SoC after sale
-        aggregator.updateBatterySoCAfterSale(
-            bids[_bidId].batteryOwner,
-            bids[_bidId].amount,
-            isPositiveReserve
-        );
     }
 }

@@ -40,19 +40,20 @@ contract Aggregator {
         uint _amountSold,
         bool _isPositiveReserve
     ) external {
-        Battery storage battery = batteries[_owner];
         //require(battery.owner == _owner, "Battery not found");
         if (_isPositiveReserve) {
             uint newSoc = uint(
-                battery.SoC - ((_amountSold * 100) / battery.capacity)
+                batteries[_owner].SoC -
+                    ((_amountSold * 100) / batteries[_owner].capacity)
             ); // calculate new SoC
-            battery.SoC = newSoc; // update the SoC
+            batteries[_owner].SoC = newSoc; // update the SoC
         } else {
             uint newSoc = uint(
-                battery.SoC + ((_amountSold * 100) / battery.capacity)
+                batteries[_owner].SoC +
+                    ((_amountSold * 100) / batteries[_owner].capacity)
             ); // calculate new SoC
-            if (newSoc > 100) battery.SoC = 100;
-            else battery.SoC = newSoc;
+            if (newSoc > 100) batteries[_owner].SoC = 100;
+            else batteries[_owner].SoC = newSoc;
         }
     }
 
