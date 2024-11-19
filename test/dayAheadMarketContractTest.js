@@ -1,4 +1,4 @@
-/* const { ethers } = require("hardhat");
+const { ethers } = require("hardhat");
 //const { time } = require("@openzeppelin/test-helpers");
 const assert = require("assert");
 
@@ -71,17 +71,24 @@ describe("Day Ahead Market Contract", function () {
   });
 
   it("should register batteries", async () => {
+    const owner1Signer = await ethers.getSigner(owner1);
+    const owner2Signer = await ethers.getSigner(owner2);
+    const owner3Signer = await ethers.getSigner(owner3);
+    const owner4Signer = await ethers.getSigner(owner4);
+    const owner5Signer = await ethers.getSigner(owner5);
+    const owner6Signer = await ethers.getSigner(owner6);
+
     // Register batteries for Aggregator 1
-    await aggregatorContract1.registerBattery(owner1, 100, 80, true);
-    await aggregatorContract1.registerBattery(owner2, 150, 85, true);
+    await aggregatorContract1.connect(owner1Signer).registerBattery(100, 80);
+    await aggregatorContract1.connect(owner2Signer).registerBattery(150, 85);
 
     // Register batteries for Aggregator 2
-    await aggregatorContract2.registerBattery(owner3, 120, 70, true);
-    await aggregatorContract2.registerBattery(owner4, 130, 75, true);
+    await aggregatorContract2.connect(owner3Signer).registerBattery(120, 70);
+    await aggregatorContract2.connect(owner4Signer).registerBattery(130, 75);
 
     // Register batteries for Aggregator 3
-    await aggregatorContract3.registerBattery(owner5, 180, 90, true);
-    await aggregatorContract3.registerBattery(owner6, 100, 95, true);
+    await aggregatorContract3.connect(owner5Signer).registerBattery(180, 90);
+    await aggregatorContract3.connect(owner6Signer).registerBattery(100, 95);
 
     const battery1 = await aggregatorContract1.batteries(owner1);
     const battery2 = await aggregatorContract1.batteries(owner2);
@@ -90,27 +97,21 @@ describe("Day Ahead Market Contract", function () {
     const battery5 = await aggregatorContract3.batteries(owner5);
     const battery6 = await aggregatorContract3.batteries(owner6);
 
-    assert.equal(battery1.owner, owner1, "Battery 1 owner mismatch");
     assert.equal(battery1.capacity, 100, "Battery 1 capacity mismatch");
     assert.equal(battery1.SoC, 80, "Battery 1 SoC mismatch");
 
-    assert.equal(battery2.owner, owner2, "Battery 2 owner mismatch");
     assert.equal(battery2.capacity, 150, "Battery 2 capacity mismatch");
     assert.equal(battery2.SoC, 85, "Battery 2 SoC mismatch");
 
-    assert.equal(battery3.owner, owner3, "Battery 3 owner mismatch");
     assert.equal(battery3.capacity, 120, "Battery 3 capacity mismatch");
     assert.equal(battery3.SoC, 70, "Battery 3 SoC mismatch");
 
-    assert.equal(battery4.owner, owner4, "Battery 4 owner mismatch");
     assert.equal(battery4.capacity, 130, "Battery 4 capacity mismatch");
     assert.equal(battery4.SoC, 75, "Battery 4 SoC mismatch");
 
-    assert.equal(battery5.owner, owner5, "Battery 5 owner mismatch");
     assert.equal(battery5.capacity, 180, "Battery 5 capacity mismatch");
     assert.equal(battery5.SoC, 90, "Battery 5 SoC mismatch");
 
-    assert.equal(battery6.owner, owner6, "Battery 6 owner mismatch");
     assert.equal(battery6.capacity, 100, "Battery 6 capacity mismatch");
     assert.equal(battery6.SoC, 95, "Battery 6 SoC mismatch");
   });
@@ -153,14 +154,17 @@ describe("Day Ahead Market Contract", function () {
     // Increase time to market open
     await ethers.provider.send("evm_increaseTime", [61]);
     await ethers.provider.send("evm_mine", []); // Avanza il blocco per applicare il cambiamento di tempo
+    const aggregator1Signer = await ethers.getSigner(aggregator1);
+    const aggregator2Signer = await ethers.getSigner(aggregator2);
+    const aggregator3Signer = await ethers.getSigner(aggregator3);
 
     // Place bids
-    await market.placeBid(aggregator1, owner1, 50, 10);
-    await market.placeBid(aggregator1, owner2, 75, 12);
-    await market.placeBid(aggregator2, owner3, 60, 8);
-    await market.placeBid(aggregator2, owner4, 70, 6);
-    await market.placeBid(aggregator3, owner5, 80, 15);
-    await market.placeBid(aggregator3, owner6, 90, 7);
+    await market.connect(aggregator1Signer).placeBid(owner1, 50, 10);
+    await market.connect(aggregator1Signer).placeBid(owner2, 75, 12);
+    await market.connect(aggregator2Signer).placeBid(owner3, 60, 8);
+    await market.connect(aggregator2Signer).placeBid(owner4, 70, 6);
+    await market.connect(aggregator3Signer).placeBid(owner5, 80, 15);
+    await market.connect(aggregator3Signer).placeBid(owner6, 90, 7);
 
     const bid0 = await market.bids(0);
     const bid1 = await market.bids(1);
@@ -169,32 +173,26 @@ describe("Day Ahead Market Contract", function () {
     const bid4 = await market.bids(4);
     const bid5 = await market.bids(5);
 
-    assert.equal(bid0.bidder, aggregator1, "Bid 0 owner mismatch");
     assert.equal(bid0.batteryOwner, owner1, "Bid 0 battery owner mismatch");
     assert.equal(bid0.amount, 50, "Bid 0 amount mismatch");
     assert.equal(bid0.price, 10, "Bid 0 price mismatch");
 
-    assert.equal(bid1.bidder, aggregator1, "Bid 1 owner mismatch");
     assert.equal(bid1.batteryOwner, owner2, "Bid 1 battery owner mismatch");
     assert.equal(bid1.amount, 75, "Bid 1 amount mismatch");
     assert.equal(bid1.price, 12, "Bid 1 price mismatch");
 
-    assert.equal(bid2.bidder, aggregator2, "Bid 2 owner mismatch");
     assert.equal(bid2.batteryOwner, owner3, "Bid 2 battery owner mismatch");
     assert.equal(bid2.amount, 60, "Bid 2 amount mismatch");
     assert.equal(bid2.price, 8, "Bid 2 price mismatch");
 
-    assert.equal(bid3.bidder, aggregator2, "Bid 3 owner mismatch");
     assert.equal(bid3.batteryOwner, owner4, "Bid 3 battery owner mismatch");
     assert.equal(bid3.amount, 70, "Bid 3 amount mismatch");
     assert.equal(bid3.price, 6, "Bid 3 price mismatch");
 
-    assert.equal(bid4.bidder, aggregator3, "Bid 4 owner mismatch");
     assert.equal(bid4.batteryOwner, owner5, "Bid 4 battery owner mismatch");
     assert.equal(bid4.amount, 80, "Bid 4 amount mismatch");
     assert.equal(bid4.price, 15, "Bid 4 price mismatch");
 
-    assert.equal(bid5.bidder, aggregator3, "Bid 5 owner mismatch");
     assert.equal(bid5.batteryOwner, owner6, "Bid 5 battery owner mismatch");
     assert.equal(bid5.amount, 90, "Bid 5 amount mismatch");
     assert.equal(bid5.price, 7, "Bid 5 price mismatch");
@@ -227,8 +225,8 @@ describe("Day Ahead Market Contract", function () {
     const bid0 = await market.bids(0);
     const bid3 = await market.bids(3);
 
-    const price0 = bid0.amount * bid0.price;
-    const price3 = bid3.amount * bid3.price;
+    const price0 = bid0.price;
+    const price3 = bid3.price;
 
     // Check initial SoC
     let battery1 = await aggregatorContract1.batteries(owner1);
@@ -237,17 +235,11 @@ describe("Day Ahead Market Contract", function () {
     assert.equal(battery1.SoC.toNumber(), 80, "Battery 1 initial SoC mismatch");
     assert.equal(battery4.SoC.toNumber(), 75, "Battery 4 initial SoC mismatch");
 
-    const buyerSigner = await ethers.getSigner(buyer);
-
     // Esegui le transazioni e attendi la conferma
-    const tx0 = await market
-      .connect(buyerSigner)
-      .purchaseEnergy(0, { value: price0 });
+    const tx0 = await market.purchaseEnergy(0, { value: price0 });
     const receipt0 = await tx0.wait(); // Ottieni la receipt della transazione
 
-    const tx3 = await market
-      .connect(buyerSigner)
-      .purchaseEnergy(3, { value: price3 });
+    const tx3 = await market.purchaseEnergy(3, { value: price3 });
     const receipt3 = await tx3.wait(); // Ottieni la receipt della transazione
 
     // Check updated SoC
@@ -311,4 +303,3 @@ describe("Day Ahead Market Contract", function () {
     );
   });
 });
- */

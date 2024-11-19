@@ -77,8 +77,8 @@
       ]
     },
     "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/Market.sol": {
-      "lastModificationDate": 1727427887384,
-      "contentHash": "68115b4766bccc1a9d2994db1b4cb75b",
+      "lastModificationDate": 1732008270959,
+      "contentHash": "fe11212a6929ab097a1d1dfbe2f4d8bc",
       "sourceName": "contracts/Market.sol",
       "solcConfig": {
         "version": "0.8.9",

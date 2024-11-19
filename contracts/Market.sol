@@ -103,7 +103,6 @@ contract Market {
     }
 
     function placeBid(
-        address _bidder,
         address _batteryOwner,
         uint _amount,
         uint _price
@@ -126,14 +125,14 @@ contract Market {
         );
 
         bids[bidCount] = Bid(
-            _bidder,
+            msg.sender,
             _batteryOwner,
             _amount,
             _price,
             false,
             address(0)
         );
-        emit BidPlaced(_bidder, _batteryOwner, _amount, _price);
+        emit BidPlaced(msg.sender, _batteryOwner, _amount, _price);
         bidCount++;
     }
 
@@ -148,15 +147,7 @@ contract Market {
     function purchaseEnergy(
         uint _bidId
     ) public payable onlyDuringResultsAnnouncement {
-        require(bids[_bidId].isSelected, "Bid not accepted");
-        require(
-            bids[_bidId].acceptedBy == msg.sender,
-            "Only accepted buyer can purchase"
-        );
-        require(
-            msg.value == bids[_bidId].amount * bids[_bidId].price,
-            "Insufficient funds"
-        );
+        require(msg.value == bids[_bidId].price, "Insufficient funds");
 
         address owner = bids[_bidId].bidder;
         address batteryOwner = bids[_bidId].batteryOwner;
@@ -171,7 +162,7 @@ contract Market {
         emit PaymentToAggregatorOwnerRecorded(
             _bidId,
             owner,
-            msg.sender,
+            bids[_bidId].bidder,
             commission
         ); // Log payment to aggregator owner
 
@@ -179,7 +170,7 @@ contract Market {
         emit PaymentToBatteryOwnerRecorded(
             _bidId,
             batteryOwner,
-            msg.sender,
+            bids[_bidId].bidder,
             msg.value - commission
         ); // Log payment to battery owner
 

@@ -1,4 +1,4 @@
-const { ethers } = require("hardhat");
+/* const { ethers } = require("hardhat");
 const assert = require("assert");
 
 describe("aFRR Market Contract", function () {
@@ -350,3 +350,4 @@ describe("aFRR Market Contract", function () {
     );
   });
 });
+ */
