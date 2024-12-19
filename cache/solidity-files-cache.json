@@ -1,0 +1,152 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/Aggregator.sol": {
+      "lastModificationDate": 1730914605202,
+      "contentHash": "964bedbb3df4a6270beb0eb94c01b266",
+      "sourceName": "contracts/Aggregator.sol",
+      "solcConfig": {
+        "version": "0.8.9",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "hardhat/console.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.9"
+      ],
+      "artifacts": [
+        "Aggregator"
+      ]
+    },
+    "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/TSO.sol": {
+      "lastModificationDate": 1730914776212,
+      "contentHash": "255277f3ed55e71aab1eced5e70e19e2",
+      "sourceName": "contracts/TSO.sol",
+      "solcConfig": {
+        "version": "0.8.9",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Aggregator.sol",
+        "hardhat/console.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.9"
+      ],
+      "artifacts": [
+        "TSO"
+      ]
+    },
+    "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/contracts/Market.sol": {
+      "lastModificationDate": 1732008270959,
+      "contentHash": "fe11212a6929ab097a1d1dfbe2f4d8bc",
+      "sourceName": "contracts/Market.sol",
+      "solcConfig": {
+        "version": "0.8.9",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Aggregator.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.9"
+      ],
+      "artifacts": [
+        "Market"
+      ]
+    },
+    "/home/sletolox1001/blockchain_projects/thesis_project/smartcontract/node_modules/hardhat/console.sol": {
+      "lastModificationDate": 1727340744610,
+      "contentHash": "681c532e816169606d13a5fe8b475074",
+      "sourceName": "hardhat/console.sol",
+      "solcConfig": {
+        "version": "0.8.9",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.22 <0.9.0"
+      ],
+      "artifacts": [
+        "console"
+      ]
+    }
+  }
+}
